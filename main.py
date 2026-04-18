@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from infra.db.database import engine, Base
-from infra.db import models
+from domain.db.database import engine, Base
+from domain.db import models
 
 #Importa las rutas
 from api.router import router

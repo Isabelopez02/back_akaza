@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
-from services.chatbot import responder_chat
+from core.services.chatbot import responder_chat
 
 #Creación del router para las rutas del chatbot
 router = APIRouter()

@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, DECIMAL, ForeignKey, TIMESTAMP
 from datetime import datetime
-from infra.db.database import Base
+from domain.db.database import Base
 
 
 class Producto(Base):

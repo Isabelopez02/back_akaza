@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str
 
+    # API Keys
+    GEMINI_API_KEY: str
+
     # Construcción de la URL
     @property
     def DATABASE_URL(self) -> str:

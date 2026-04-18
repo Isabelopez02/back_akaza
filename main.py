@@ -2,6 +2,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from infra.db.database import engine, Base
 from infra.db import models
+
+#Importa las rutas
+from api.router import router
+
 # Lee los modelos y crea las tablas automáticamente
 Base.metadata.create_all(bind=engine)
 
@@ -20,6 +24,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Ruta del chatbot
+app.include_router(router)
 
 # Endpoint de prueba (El saludo de bienvenida)
 @app.get("/")

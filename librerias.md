@@ -21,6 +21,8 @@ Instala FastAPI, el servidor Uvicorn y las herramientas de base de datos.
 \`\`\`bash
 pip install fastapi uvicorn sqlalchemy pydantic
 \`\`\`
+pip install google-genai
+\`\`\`
 
 **4. Levantar el Servidor en Modo Desarrollo**
 Ejecuta la aplicación. El flag `--reload` hará que el servidor se reinicie automáticamente cada vez que guardes un cambio en el código.

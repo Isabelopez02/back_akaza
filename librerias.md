@@ -12,13 +12,13 @@ python -m venv venv
 
 **2. Activar el Entorno Virtual (Siempre que abras la terminal)**
 Antes de instalar o ejecutar cualquier cosa, debes activar el entorno. Sabrás que está activo porque aparecerá `(venv)` al inicio de tu línea de comandos.
-\`\`\`bash
+\`\`\`
 .\venv\Scripts\activate
 \`\`\`
 
 **3. Instalar Dependencias**
 Instala FastAPI, el servidor Uvicorn y las herramientas de base de datos.
-\`\`\`bash
+\`\`\`
 pip install fastapi uvicorn sqlalchemy pydantic
 \`\`\`
 pip install google-genai
@@ -26,7 +26,7 @@ pip install google-genai
 
 **4. Levantar el Servidor en Modo Desarrollo**
 Ejecuta la aplicación. El flag `--reload` hará que el servidor se reinicie automáticamente cada vez que guardes un cambio en el código.
-\`\`\`bash
+\`\`\`
 uvicorn main:app --reload
 \`\`\`
 

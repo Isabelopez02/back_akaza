@@ -76,3 +76,22 @@ def obtener_plato(id_plato: int, db: Session = Depends(get_db)):
     if not plato:
         raise HTTPException(status_code=404, detail="Plato no encontrado")
     return plato
+
+# ==========================================
+# ACTUALIZAR Y ELIMINAR (Completar CRUD)
+# ==========================================
+@router.put("/productos/{id_producto}", response_model=ProductoResponse)
+def actualizar_producto(id_producto: int, data: ProductoCreate, db: Session = Depends(get_db)):
+    """Actualiza todos los datos de un producto."""
+    repo = ProductoRepository(db)
+    resultado = repo.actualizar_producto(id_producto, data)
+    if not resultado:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    return resultado
+
+@router.delete("/productos/{id_producto}", status_code=status.HTTP_204_NO_CONTENT)
+def eliminar_producto(id_producto: int, db: Session = Depends(get_db)):
+    """Elimina un producto del inventario."""
+    repo = ProductoRepository(db)
+    repo.eliminar_producto(id_producto)
+    # 204 significa "Éxito, pero no devuelvo datos" (estándar para DELETE)

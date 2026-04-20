@@ -35,3 +35,25 @@ class ProductoRepository:
             self.db.commit()
             self.db.refresh(producto)
         return producto
+
+        # Actualizar producto completo
+
+    def actualizar_producto(self, id_producto: int, data: ProductoCreate):
+        producto = self.obtener_por_id(id_producto)
+        if producto:
+            producto.nombre = data.nombre
+            producto.unidad_medida = data.unidad_medida
+            producto.stock_actual = data.stock_actual
+            producto.stock_minimo_alerta = data.stock_minimo_alerta
+            self.db.commit()
+            self.db.refresh(producto)
+        return producto
+
+        # Eliminar producto
+
+    def eliminar_producto(self, id_producto: int):
+        producto = self.obtener_por_id(id_producto)
+        if producto:
+            self.db.delete(producto)
+            self.db.commit()
+        return producto

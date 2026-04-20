@@ -27,9 +27,8 @@ from infra.repository.menu_repo import MenuRepository
 from core.schemas.inventario_schema import ProductoCreate, ProductoResponse
 from core.schemas.menu_schema import PlatoCreate, PlatoResponse
 
-
 # ==========================================
-# 1. ENDPOINTS PARA PRODUCTOS (Inventario)
+# ENDPOINTS PARA PRODUCTOS (Inventario)
 # ==========================================
 @router.post("/productos", response_model=ProductoResponse, status_code=status.HTTP_201_CREATED)
 def crear_producto(data: ProductoCreate, db: Session = Depends(get_db)):
@@ -54,7 +53,7 @@ def obtener_producto(id_producto: int, db: Session = Depends(get_db)):
 
 
 # ==========================================
-# 2. ENDPOINTS PARA MENÚ (Platos)
+# ENDPOINTS PARA MENÚ (Platos)
 # ==========================================
 @router.post("/menu/platos", response_model=PlatoResponse, status_code=status.HTTP_201_CREATED)
 def crear_plato(data: PlatoCreate, db: Session = Depends(get_db)):
@@ -95,3 +94,29 @@ def eliminar_producto(id_producto: int, db: Session = Depends(get_db)):
     repo = ProductoRepository(db)
     repo.eliminar_producto(id_producto)
     # 204 significa "Éxito, pero no devuelvo datos" (estándar para DELETE)
+
+# ==========================================
+# ENDPOINTS PARA PEDIDOS (Ventas)
+# ==========================================
+from infra.repository.pedido_repo import PedidoRepository
+from core.schemas.venta_schema import PedidoCreate, PedidoResponse
+@router.post("/pedidos", response_model=PedidoResponse, status_code=status.HTTP_201_CREATED)
+def crear_pedido(data: PedidoCreate, db: Session = Depends(get_db)):
+    """Registra un nuevo pedido en una mesa."""
+    repo = PedidoRepository(db)
+    return repo.crear_pedido(data)
+
+@router.get("/pedidos/{id_pedido}", response_model=PedidoResponse)
+def obtener_pedido(id_pedido: int, db: Session = Depends(get_db)):
+    """Consulta un pedido específico por su ID."""
+    repo = PedidoRepository(db)
+    pedido = repo.obtener_pedido_por_id(id_pedido)
+    if not pedido:
+        raise HTTPException(status_code=404, detail="Pedido no encontrado")
+    return pedido
+
+@router.get("/mesas/{nro_mesa}/pedidos", response_model=list[PedidoResponse])
+def pedidos_por_mesa(nro_mesa: int, db: Session = Depends(get_db)):
+    """Lista todos los pedidos activos de una mesa."""
+    repo = PedidoRepository(db)
+    return repo.listar_pedidos_por_mesa(nro_mesa)

@@ -43,3 +43,15 @@ class UsuarioRepository:
     self.db.add(nuevo_perfil)
     self.db.commit()
     return nuevo_perfil
+
+  def actualizar_perfil_usuario(self, id_usuario: int, datos_perfil: PerfilUsuarioCreate):
+    perfil = self.db.query(PerfilUsuario).filter(PerfilUsuario.id_usuario == id_usuario).first()
+
+    if perfil:
+      perfil.alergias = datos_perfil.alergias
+      perfil.preferencias = datos_perfil.preferencias
+      # No actualizamos es_temporal ni id_rol aquí por seguridad
+      self.db.commit()
+      self.db.refresh(perfil)
+      return perfil
+    return None

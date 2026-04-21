@@ -1,26 +1,68 @@
-# Importa el SDJ de Google Gemini
-from google import genai
-# Acceder a variables de entorno
 import os
-#Carga las variables desde el archivo .env
+import json
+from sqlalchemy.orm import Session
+from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 
-# Carga las variables de entorno desde el archivo .env
+from core.services.menu_service import MenuService
+from infra.repository.chat_repo import ChatRepository
+
 load_dotenv()
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-# Función del chatbot (Aún estoy validando porque esta fallando pero si hace la conexión)
-def responder_chat(mensaje: str):
-    response = client.models.generate_content(
-        #Modelo  de IA para mensajes
-        model="gemini-1.5-flash",
-        contents=[
-            #Comportamiento del chatbot(He puesto algo básico lo podemos mejorar)
-            "Eres un chatbot de restaurante, responde corto y conciso.",
-            mensaje
-        ]
-    )
+class ChatService:
+  def __init__(self, db: Session):
+    self.db = db
+    self.menu_service = MenuService(db)
+    self.chat_repo = ChatRepository(db)  # ¡Inyectamos tu nuevo repositorio!
+    self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+    self.modelo = "gemini-3-flash-preview"
 
-#Devuelve la respuesta del chatbot
-    return response.text
+  def procesar_mensaje(self, id_usuario: int, nro_mesa: int, mensaje: str) -> str:
+    try:
+      # 1. Obtenemos el contexto (La carta actual)
+      carta_actual = self.menu_service.obtener_carta_para_ia()
+
+      # 2. Instrucciones para Akaza
+      instrucciones_sistema = f"""
+            Eres Akaza, la asistente virtual exclusiva de un restaurante de comida marina.
+            Eres amable, divertida y mantienes un tono formal pero cercano.
+            Estás atendiendo al usuario ID {id_usuario} en la Mesa {nro_mesa}.
+
+            AQUÍ TIENES LA CARTA ACTUAL DEL DÍA (En formato JSON):
+            {json.dumps(carta_actual, ensure_ascii=False)}
+
+            REGLAS:
+            1. NUNCA inventes platos. Solo ofrece lo que está en la carta.
+            2. Si el cliente está pidiendo, ve armando su orden.
+            """
+
+      # 3. Llamada a Gemini
+      response = self.client.models.generate_content(
+        model=self.modelo,
+        contents=mensaje,
+        config=types.GenerateContentConfig(
+          system_instruction=instrucciones_sistema,
+          temperature=0.7,
+        )
+      )
+
+      respuesta_akaza = response.text
+
+      # ==========================================
+      # 4. ¡GUARDAR EN TU MODELO DE BASE DE DATOS!
+      # ==========================================
+      # Usamos el repositorio para dejar evidencia de la charla
+      self.chat_repo.guardar_interaccion(
+        id_usuario=id_usuario,
+        mensaje_cliente=mensaje,
+        respuesta_ia=respuesta_akaza,
+        contexto=carta_actual
+      )
+
+      # 5. Devolvemos la respuesta al frontend
+      return respuesta_akaza
+
+    except Exception as e:
+      raise ValueError(f"Error al procesar el mensaje con la IA: {str(e)}")

@@ -116,3 +116,6 @@ class MenuRepository:
 
     def obtener_todos_los_combos(self):
         return self.db.query(Combo).filter(Combo.activo == True).all()
+
+    def obtener_todas_las_sustituciones(self):
+        return self.db.query(SustitucionPermitida).all()

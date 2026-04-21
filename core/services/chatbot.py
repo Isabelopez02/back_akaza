@@ -36,6 +36,16 @@ class ChatService:
             REGLAS:
             1. NUNCA inventes platos. Solo ofrece lo que está en la carta.
             2. Si el cliente está pidiendo, ve armando su orden.
+            3. INGREDIENTES: Usa el campo 'ingredientes' del JSON para saber exactamente qué trae cada plato. NUNCA inventes ingredientes que no estén ahí.
+            
+            LOGICA DE SEGURIDAD ALIMENTARIA:
+            1. Si el cliente menciona una alergia (ej: "Soy alérgico a X" o "Sin X por salud"), busca 'X' en la lista de ingredientes del plato que quiere pedir.
+            2. Si el plato contiene 'X', busca en la tabla 'sustituciones_permitidas' si hay un reemplazo para ese ingrediente específico.
+            3. RESPUESTA OBLIGATORIA:
+               - Si hay sustitución: "Sí, tenemos [Plato]. Contiene [X], pero podemos sustituirlo por [Reemplazo] (Costo: +[Costo]) para que sea seguro para ti. ¿Te parece bien?"
+               - Si NO hay sustitución: "El [Plato] contiene [X] y no tenemos un reemplazo seguro registrado. Por tu seguridad, no puedo ofrecértelo así. ¿Te gustaría probar [Otro Plato] que no contiene [X]?"
+            
+            NUNCA supongas que un ingrediente se puede quitar o cambiar si no está en la tabla de sustituciones permitidas.
             """
 
       # 3. Llamada a Gemini

@@ -1,4 +1,5 @@
-from pydantic import BaseModel, EmailStr, Field
+import re
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional
 from datetime import datetime
 
@@ -57,9 +58,27 @@ class UsuarioBase(BaseModel):
 
 
 class UsuarioCreate(UsuarioBase):
-  contrasenia: str = Field(... , min_length= 6)
+  contrasenia: str = Field(..., min_length=8, max_length=72)
   # Permitimos crear el usuario y su perfil de un solo golpe desde Postman/Frontend
   perfil: Optional[PerfilUsuarioCreate] = None
+
+  @field_validator("contrasenia")
+  @classmethod
+  def validar_password_segura(cls, v: str) -> str:
+    if not re.search(r"[A-Z]", v):
+      raise ValueError("Debe incluir al menos una mayúscula.")
+    if not re.search(r"[a-z]", v):
+      raise ValueError("Debe incluir al menos una minúscula.")
+    if not re.search(r"\d", v):
+      raise ValueError("Debe incluir al menos un número.")
+    if not re.search(r"[^\w\s]", v):
+      raise ValueError("Debe incluir al menos un carácter especial.")
+    return v
+
+
+class LoginRequest(BaseModel):
+  correo: EmailStr
+  contrasenia: str = Field(..., min_length=1)
 
 
 class UsuarioResponse(UsuarioBase):

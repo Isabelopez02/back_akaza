@@ -1,5 +1,6 @@
 import os
 import json
+from typing import Optional
 from sqlalchemy.orm import Session
 from google import genai
 from google.genai import types
@@ -15,43 +16,80 @@ class ChatService:
   def __init__(self, db: Session):
     self.db = db
     self.menu_service = MenuService(db)
-    self.chat_repo = ChatRepository(db)  # ¡Inyectamos tu nuevo repositorio!
+    self.chat_repo = ChatRepository(db)
     self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
     self.modelo = "gemini-3-flash-preview"
 
-  def procesar_mensaje(self, id_usuario: int, nro_mesa: int, mensaje: str) -> str:
+  # 1. Hacemos que id_usuario y nro_mesa sean opcionales (pueden ser None)
+  def procesar_mensaje(self, id_usuario: Optional[int], nro_mesa: Optional[int], mensaje: str) -> str:
     try:
-      # 1. Obtenemos el contexto (La carta actual)
+      # Obtenemos la carta con ingredientes y sustituciones
       carta_actual = self.menu_service.obtener_carta_para_ia()
 
-      # 2. Instrucciones para Akaza
+      # ==========================================
+      # 2. DEFINIR EL MODO DEL CLIENTE (QR / VIP)
+      # ==========================================
+      reglas_especificas = ""
+
+      if not nro_mesa:
+        reglas_especificas = """
+          ESTADO: Informativo (No ha escaneado QR).
+          REGLA DE PEDIDOS: TIENES PROHIBIDO TOMAR PEDIDOS. Si intentan pedir, di: "Me encantaría tomar tu orden, pero por favor escanea el código QR de tu mesa primero."
+          """
+      elif nro_mesa and not id_usuario:
+        reglas_especificas = f"""
+          ESTADO: Cliente Casual en Mesa {nro_mesa}.
+          REGLA DE PEDIDOS: Puedes tomar pedidos para la mesa {nro_mesa}.
+          """
+      elif nro_mesa and id_usuario:
+        reglas_especificas = f"""
+          ESTADO: Cliente VIP (ID: {id_usuario}) en Mesa {nro_mesa}.
+          REGLA DE PEDIDOS: Toma pedidos con total confianza. Trátalo de forma especial.
+          """
+
+      # ==========================================
+      # 3. CONSTRUIR EL CEREBRO DE AKAZA
+      # ==========================================
       instrucciones_sistema = f"""
-            Eres Akaza, la asistente virtual exclusiva de un restaurante de comida marina.
-            Eres amable, divertida y mantienes un tono formal pero cercano.
-            Estás atendiendo al usuario ID {id_usuario} en la Mesa {nro_mesa}.
+      Eres Akaza, la asistente virtual exclusiva de un restaurante de comida marina.
+      Eres amable, divertida y mantienes un tono formal pero cercano.
 
-            AQUÍ TIENES LA CARTA ACTUAL DEL DÍA (En formato JSON):
-            {json.dumps(carta_actual, ensure_ascii=False)}
+      {reglas_especificas}
 
-            REGLAS:
-            1. NUNCA inventes platos. Solo ofrece lo que está en la carta.
-            2. Si el cliente está pidiendo, ve armando su orden.
-            3. INGREDIENTES: Usa el campo 'ingredientes' del JSON para saber exactamente qué trae cada plato. NUNCA inventes ingredientes que no estén ahí.
-            
-            LOGICA DE SEGURIDAD ALIMENTARIA:
-            1. Si el cliente menciona una alergia (ej: "Soy alérgico a X" o "Sin X por salud"), busca 'X' en la lista de ingredientes del plato que quiere pedir.
-            2. Si el plato contiene 'X', busca en la tabla 'sustituciones_permitidas' si hay un reemplazo para ese ingrediente específico.
-            3. RESPUESTA OBLIGATORIA:
-               - Si hay sustitución: "Sí, tenemos [Plato]. Contiene [X], pero podemos sustituirlo por [Reemplazo] (Costo: +[Costo]) para que sea seguro para ti. ¿Te parece bien?"
-               - Si NO hay sustitución: "El [Plato] contiene [X] y no tenemos un reemplazo seguro registrado. Por tu seguridad, no puedo ofrecértelo así. ¿Te gustaría probar [Otro Plato] que no contiene [X]?"
-            
-            NUNCA supongas que un ingrediente se puede quitar o cambiar si no está en la tabla de sustituciones permitidas.
-            """
+      AQUÍ TIENES LA CARTA ACTUAL DEL DÍA (En formato JSON):
+      {json.dumps(carta_actual, ensure_ascii=False)}
 
-      # 3. Llamada a Gemini
+      REGLAS GENERALES Y DE SEGURIDAD ALIMENTARIA:
+      1. NUNCA inventes platos ni ingredientes. Usa estrictamente el JSON proporcionado.
+      2. Si el cliente menciona una alergia o restricción (ej: "Soy alérgico a X"), busca 'X' en la lista de ingredientes del plato.
+      3. Si el plato contiene 'X', busca OBLIGATORIAMENTE en la tabla 'sustituciones_permitidas' si hay un reemplazo válido.
+      4. RESPUESTA ALERGIAS:
+         - Si hay sustitución: "Sí, tenemos [Plato]. Contiene [X], pero podemos sustituirlo por [Reemplazo] (Costo: +[Costo]) para que sea seguro para ti."
+         - Si NO hay sustitución: "El [Plato] contiene [X] y no tenemos un reemplazo seguro registrado. Por tu seguridad, ¿te gustaría probar [Otro Plato]?"
+      5. Si están haciendo un pedido, repite la orden al final y pregunta si están de acuerdo.
+      """
+
+      # ==========================================
+      # 4. RECONSTRUIR LA MEMORIA (HISTORIAL)
+      # ==========================================
+      # Buscamos el historial. (Asegúrate de que tu repo acepte id_usuario o nro_mesa para buscar)
+      mensajes_previos = self.chat_repo.obtener_historial_reciente(id_usuario=id_usuario, nro_mesa=nro_mesa, limite=4)
+
+      historial_gemini = []
+
+      for msg in mensajes_previos:
+        historial_gemini.append(types.Content(role="user", parts=[types.Part.from_text(text=msg.mensaje_cliente)]))
+        historial_gemini.append(types.Content(role="model", parts=[types.Part.from_text(text=msg.respuesta_ia)]))
+
+      # Añadimos el mensaje actual al final del hilo
+      historial_gemini.append(types.Content(role="user", parts=[types.Part.from_text(text=mensaje)]))
+
+      # ==========================================
+      # 5. LLAMADA A GEMINI CON EL HISTORIAL COMPLETO
+      # ==========================================
       response = self.client.models.generate_content(
         model=self.modelo,
-        contents=mensaje,
+        contents=historial_gemini,  # Pasamos la lista completa, no solo el string
         config=types.GenerateContentConfig(
           system_instruction=instrucciones_sistema,
           temperature=0.7,
@@ -61,17 +99,17 @@ class ChatService:
       respuesta_akaza = response.text
 
       # ==========================================
-      # 4. ¡GUARDAR EN TU MODELO DE BASE DE DATOS!
+      # 6. GUARDAR LA INTERACCIÓN
       # ==========================================
-      # Usamos el repositorio para dejar evidencia de la charla
+      # Guardamos enviando también el nro_mesa para no perder el rastro de los clientes casuales
       self.chat_repo.guardar_interaccion(
         id_usuario=id_usuario,
+        nro_mesa=nro_mesa,
         mensaje_cliente=mensaje,
         respuesta_ia=respuesta_akaza,
         contexto=carta_actual
       )
 
-      # 5. Devolvemos la respuesta al frontend
       return respuesta_akaza
 
     except Exception as e:

@@ -1,6 +1,8 @@
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from core.schemas.usuario_schema import UsuarioCreate, PerfilUsuarioCreate
+from core.security.security import encriptar_password, verificar_password
 from infra.db.models import Rol, Usuario, PerfilUsuario
 class UsuarioRepository:
   def __init__(self, db: Session):
@@ -16,14 +18,30 @@ class UsuarioRepository:
     nuevo_usuario = Usuario (
       nombre = usuarioData.nombre,
       correo = usuarioData.correo,
-      contrasenia = usuarioData.contrasenia
+      contrasenia = encriptar_password(usuarioData.contrasenia)
     )
+    try:
+      self.db.add(nuevo_usuario)
+      self.db.commit()
+      self.db.refresh(nuevo_usuario)
+      return nuevo_usuario
+    except IntegrityError:
+      self.db.rollback()
+      raise ValueError("El correo ya está registrado.")
+    except Exception:
+      self.db.rollback()
+      raise
 
-    self.db.add(nuevo_usuario)
-    self.db.commit()
-    self.db.refresh(nuevo_usuario)
+  def obtener_por_correo(self, correo: str):
+    return self.db.query(Usuario).filter(Usuario.correo == correo).first()
 
-    return nuevo_usuario
+  def validar_credenciales(self, correo: str, contrasenia: str):
+    usuario = self.obtener_por_correo(correo)
+    if not usuario:
+      return None
+    if not verificar_password(contrasenia, usuario.contrasenia):
+      return None
+    return usuario
 
   # ==========================================
   # 2. CREACIÓN DEL USUARIO COMPLETO

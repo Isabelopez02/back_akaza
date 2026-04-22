@@ -9,6 +9,7 @@ from api.router import router as chat_router
 
 # 🔥 2. Importa los 3 nuevos routers del sistema ERP
 from api.routes import menu_router, pedido_router, inventario_router
+from api.routes.auth import auth_router
 
 # Lee los modelos y crea las tablas automáticamente
 Base.metadata.create_all(bind=engine)
@@ -23,7 +24,7 @@ app = FastAPI(
 # Configuración de CORS (Para que tu frontend en Next.js pueda hacerle peticiones)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # En producción cambiarás el "*" por la URL de tu frontend
+    allow_origins=["http://localhost:3000"], # Cambia por tu frontend real en producción
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -40,6 +41,7 @@ app.include_router(chat_router)
 app.include_router(menu_router.router)
 app.include_router(pedido_router.router)
 app.include_router(inventario_router.router)
+app.include_router(auth_router.router)
 
 # ==========================================
 

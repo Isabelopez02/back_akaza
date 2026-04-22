@@ -1,5 +1,6 @@
 import os
 import json
+import re
 from typing import Optional
 from sqlalchemy.orm import Session
 from google import genai
@@ -7,6 +8,8 @@ from google.genai import types
 from dotenv import load_dotenv
 
 from core.services.menu_service import MenuService
+from core.services.pedido_service import PedidoService
+from core.schemas.venta_schema import PedidoCreate
 from infra.repository.chat_repo import ChatRepository
 
 load_dotenv()
@@ -67,6 +70,9 @@ class ChatService:
          - Si hay sustitución: "Sí, tenemos [Plato]. Contiene [X], pero podemos sustituirlo por [Reemplazo] (Costo: +[Costo]) para que sea seguro para ti."
          - Si NO hay sustitución: "El [Plato] contiene [X] y no tenemos un reemplazo seguro registrado. Por tu seguridad, ¿te gustaría probar [Otro Plato]?"
       5. Si están haciendo un pedido, repite la orden al final y pregunta si están de acuerdo.
+      6. CUANDO el usuario confirme explícitamente que está de acuerdo con su orden, debes incluir OBLIGATORIAMENTE al final de tu mensaje una etiqueta secreta con este formato exacto:
+         [ORDEN_CONFIRMADA] {{"detalles": [{{"plato_ref": 3, "cantidad": 2}}, {{"plato_ref": 5, "cantidad": 1}}]}}
+         Usa IDs reales de la carta actual. Esa etiqueta debe ir al final del mensaje.
       """
 
       # ==========================================
@@ -96,10 +102,57 @@ class ChatService:
         )
       )
 
-      respuesta_akaza = response.text
+      respuesta_akaza = response.text or ""
 
       # ==========================================
-      # 6. GUARDAR LA INTERACCIÓN
+      # 6. INTERCEPTOR DE PEDIDOS CONFIRMADOS
+      # ==========================================
+      etiqueta_orden = "[ORDEN_CONFIRMADA]"
+      if etiqueta_orden in respuesta_akaza:
+        try:
+          if nro_mesa is None:
+            raise ValueError("No se puede registrar pedido confirmado sin número de mesa.")
+
+          _, bloque_orden = respuesta_akaza.split(etiqueta_orden, 1)
+          bloque_orden = bloque_orden.strip()
+          if not bloque_orden:
+            raise ValueError("La IA emitió la etiqueta de confirmación sin JSON.")
+
+          orden_data = json.loads(bloque_orden)
+          if not isinstance(orden_data, dict):
+            raise ValueError("El JSON de la orden confirmada no es un objeto válido.")
+          if "detalles" not in orden_data:
+            raise ValueError("El JSON de la orden confirmada no contiene 'detalles'.")
+
+          pedido_service = PedidoService(self.db)
+          payload_pedido = PedidoCreate(
+            id_usuario=id_usuario,
+            nro_mesa=nro_mesa,
+            detalles=orden_data["detalles"],
+          )
+          pedido_service.registrar_nuevo_pedido(payload_pedido)
+
+          # Limpiamos la etiqueta y el JSON para que el frontend solo vea texto amigable.
+          respuesta_akaza = re.sub(
+            r"\s*\[ORDEN_CONFIRMADA\].*$",
+            "",
+            respuesta_akaza,
+            flags=re.DOTALL,
+          ).strip()
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+          # Nunca exponemos el bloque secreto al cliente final.
+          respuesta_akaza = re.sub(
+            r"\s*\[ORDEN_CONFIRMADA\].*$",
+            "",
+            respuesta_akaza,
+            flags=re.DOTALL,
+          ).strip()
+          if not respuesta_akaza:
+            respuesta_akaza = "Tu pedido fue confirmado, pero ocurrió un problema al procesarlo. ¿Puedes reenviarlo, por favor?"
+          print(f"[InterceptorPedido] Error controlado: {e}")
+
+      # ==========================================
+      # 7. GUARDAR LA INTERACCIÓN
       # ==========================================
       # Guardamos enviando también el nro_mesa para no perder el rastro de los clientes casuales
       self.chat_repo.guardar_interaccion(

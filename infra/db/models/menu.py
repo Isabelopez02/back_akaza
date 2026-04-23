@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Text, DECIMAL, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
-from domain.db.database import Base
+from infra.db.database import Base
 
 
 class Plato(Base):

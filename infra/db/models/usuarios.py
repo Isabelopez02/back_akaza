@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, Text, TIMESTAMP
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from domain.db.database import Base
+from infra.db.database import Base
 
 
 class Rol(Base):

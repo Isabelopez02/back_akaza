@@ -63,7 +63,8 @@ CREATE TABLE platos (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
     descripcion TEXT,
-    precio_venta DECIMAL(10,2)
+    precio_venta DECIMAL(10,2),
+    imagen_url VARCHAR(100)
 );
 
 CREATE TABLE recetas (
@@ -79,7 +80,8 @@ CREATE TABLE combos (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(100),
     precio_venta DECIMAL(10,2),
-    activo BOOLEAN DEFAULT TRUE
+    activo BOOLEAN DEFAULT TRUE,
+    imagen_url VARCHAR(100)
 );
 
 CREATE TABLE combo_platos (
@@ -131,10 +133,26 @@ CREATE TABLE venta_dia_resumen (
 -- ¡NUEVA! TABLA PARA LA MEMORIA DE LA IA
 CREATE TABLE ia_historial_chat (
     id SERIAL PRIMARY KEY,
-    id_usuario INT REFERENCES usuarios(id) ON DELETE CASCADE, -- ¡Agregado!
-    id_pedido INT REFERENCES pedidos(id) ON DELETE SET NULL, -- ¡Agregado!
+
+    id_usuario INT NULL,
+    id_pedido INT NULL,
+
+    nro_mesa INT,
+
     mensaje_cliente TEXT NOT NULL,
     respuesta_ia TEXT NOT NULL,
-    contexto_enviado JSONB, 
-    fecha_interaccion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+    contexto_enviado JSONB,
+
+    fecha_interaccion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_usuario
+        FOREIGN KEY (id_usuario)
+        REFERENCES usuarios(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_pedido
+        FOREIGN KEY (id_pedido)
+        REFERENCES pedidos(id)
+        ON DELETE SET NULL
 );

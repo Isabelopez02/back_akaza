@@ -23,8 +23,6 @@ class IAHistorialChat(Base):
     contexto_enviado = Column(JSONB)
     fecha_interaccion = Column(TIMESTAMP, default=datetime.utcnow)
 
-    fecha_interaccion = Column(TIMESTAMP, default=datetime.utcnow)
-
     # Relaciones
     usuario = relationship("Usuario")
     pedido = relationship("Pedido")

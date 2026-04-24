@@ -61,6 +61,7 @@ class MenuService:
                 "nombre": p.nombre,
                 "descripcion": p.descripcion,
                 "precio": float(p.precio_venta),
+                "imagen_url": p.imagen_url,
                 "ingredientes": detalles_ingredientes  # ¡ESTO ES LO QUE LE FALTABA A LA IA!
             })
 
@@ -68,6 +69,7 @@ class MenuService:
             carta_ia["combos"].append({
                 "id_referencia": c.id,
                 "nombre": c.nombre,
+                "imagen_url": p.imagen_url,
                 "precio": float(c.precio_venta)
             })
 

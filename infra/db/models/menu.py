@@ -10,7 +10,7 @@ class Plato(Base):
     nombre = Column(String(100), nullable=False)
     descripcion = Column(Text)
     precio_venta = Column(DECIMAL(10, 2))
-
+    imagen_url = Column(String, nullable=True)
     recetas = relationship("Receta", back_populates="plato")
     detalles_pedido = relationship("DetallePedido", back_populates="plato")
 
@@ -36,6 +36,7 @@ class Combo(Base):
     nombre = Column(String(100))
     precio_venta = Column(DECIMAL(10, 2))
     activo = Column(Boolean, default=True)
+    imagen_url = Column(String, nullable=True)
 
     platos = relationship("ComboPlato", back_populates="combo")
     detalles_pedido = relationship("DetallePedido", back_populates="combo")

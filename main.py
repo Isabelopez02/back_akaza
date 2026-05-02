@@ -9,6 +9,7 @@ from api.router import router as chat_router
 
 # 🔥 2. Importa los 3 nuevos routers del sistema ERP
 from api.routes import menu_router, pedido_router, inventario_router
+from api.routes.compras_router import router as compras_router
 from api.routes.auth import auth_router
 
 # Lee los modelos y crea las tablas automáticamente
@@ -41,6 +42,7 @@ app.include_router(chat_router)
 app.include_router(menu_router.router)
 app.include_router(pedido_router.router)
 app.include_router(inventario_router.router)
+app.include_router(compras_router)
 app.include_router(auth_router.router)
 
 # ==========================================

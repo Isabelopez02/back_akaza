@@ -34,16 +34,11 @@ class PerfilUsuarioBase(BaseModel):
 
 
 class PerfilUsuarioCreate(PerfilUsuarioBase):
-  # AQUÍ ESTÁ TU LÓGICA: Pedimos el nombre en texto, no el ID.
-  # Le ponemos "CLIENTE" por defecto para que ni siquiera sea obligatorio enviarlo.
-  nombre_rol: str = Field(default="CLIENTE", description="Nombre del rol a buscar en la BD")
+  pass
 
 
 class PerfilUsuarioResponse(PerfilUsuarioBase):
   id_usuario: int
-  id_rol: int
-
-  # rol: Optional[RolResponse] = None # (Opcional si quieres que también devuelva el nombre del rol al consultar)
 
   class Config:
     from_attributes = True
@@ -54,13 +49,11 @@ class PerfilUsuarioResponse(PerfilUsuarioBase):
 # ==========================================
 class UsuarioBase(BaseModel):
   nombre: str = Field(... , min_length=2, max_length=50)
-  correo: EmailStr  # Valida automáticamente que tenga el @ y un dominio
+  correo: EmailStr
 
 
 class UsuarioCreate(UsuarioBase):
   contrasenia: str = Field(..., min_length=8, max_length=72)
-  # Permitimos crear el usuario y su perfil de un solo golpe desde Postman/Frontend
-  perfil: Optional[PerfilUsuarioCreate] = None
 
   @field_validator("contrasenia")
   @classmethod
@@ -83,11 +76,27 @@ class LoginRequest(BaseModel):
 
 class UsuarioResponse(UsuarioBase):
   id: int
+  id_rol: int
   creado_en: datetime
-  # Lo ponemos Optional porque al crearlo recién, modificado_en será nulo
   modificado_en: Optional[datetime] = None
-
   perfil: Optional[PerfilUsuarioResponse] = None
+  rol: Optional[RolResponse] = None
 
   class Config:
     from_attributes = True
+
+# ==========================================
+# 4. MODELO UNIFICADO (CUENTA COMPLETA)
+# ==========================================
+class UnifiedUserAccount(BaseModel):
+    id: int
+    nombre: str
+    correo: str
+    rol: str
+    alergias: Optional[str] = ""
+    preferencias: Optional[str] = ""
+    id_mesa_actual: Optional[int] = None
+    autenticado: bool = True
+
+    class Config:
+        from_attributes = True

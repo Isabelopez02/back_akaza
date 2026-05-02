@@ -3,9 +3,13 @@ from datetime import datetime, timedelta, timezone
 
 import bcrypt
 import jwt
+from dotenv import load_dotenv
 from fastapi import HTTPException, status
 
 import hashlib
+
+load_dotenv()
+
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
     raise RuntimeError("SECRET_KEY no está configurada en el entorno.")

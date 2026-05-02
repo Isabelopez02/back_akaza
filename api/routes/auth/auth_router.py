@@ -7,6 +7,7 @@ from core.security.security import crear_token_jwt, decodificar_token, SECRET_KE
 from core.schemas.usuario_schema import LoginRequest, UsuarioCreate
 from infra.db.database import get_db
 from infra.repository.usuario_repo import UsuarioRepository
+from infra.db.models.usuarios import Usuario
 
 security = HTTPBearer()
 
@@ -41,15 +42,18 @@ def login_usuario(payload: LoginRequest, db: Session = Depends(get_db)):
 
     return {
         "access_token": token,
-        "token_type": "bearer"
+        "token_type": "bearer",
+        "nombre": usuario.nombre,
+        "rol": usuario.rol.nombre if usuario.rol else "cliente"
     }
 
 
 @router.get("/me")
-def obtener_usuario_actual(credentials: HTTPAuthorizationCredentials = Depends(security)):
+def obtener_usuario_actual(db: Session = Depends(get_db), credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
     try:
         payload = decodificar_token(token)
+        user_id = payload.get("sub")
     except HTTPException:
         raise
     except Exception:
@@ -59,8 +63,16 @@ def obtener_usuario_actual(credentials: HTTPAuthorizationCredentials = Depends(s
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    repo = UsuarioRepository(db)
+    usuario = db.query(Usuario).filter(Usuario.id == user_id).first()
+    
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
     return {
-        "id_usuario": payload.get("sub"),
-        "correo": payload.get("correo"),
+        "id": usuario.id,
+        "nombre": usuario.nombre,
+        "correo": usuario.correo,
+        "rol": usuario.rol.nombre if usuario.rol else "cliente",
         "autenticado": True,
     }

@@ -14,16 +14,39 @@ class UsuarioRepository:
   def obtener_rol_por_nombre(self, nombre_rol:str):
     return self.db.query(Rol).filter(Rol.nombre.ilike(nombre_rol)).first()
 
-  def crear_usuario(self, usuarioData: UsuarioCreate ):
-    nuevo_usuario = Usuario (
-      nombre = usuarioData.nombre,
-      correo = usuarioData.correo,
-      contrasenia = encriptar_password(usuarioData.contrasenia)
+  def crear_usuario(self, usuarioData: UsuarioCreate):
+    # Buscar el rol 'cliente' por defecto
+    rol_cliente = self.obtener_rol_por_nombre("cliente")
+    if not rol_cliente:
+        # Si no existe, lo creamos para evitar errores (opcional, mejor si ya existe)
+        rol_cliente = Rol(nombre="cliente")
+        self.db.add(rol_cliente)
+        self.db.commit()
+        self.db.refresh(rol_cliente)
+
+    nuevo_usuario = Usuario(
+      nombre=usuarioData.nombre,
+      correo=usuarioData.correo,
+      contrasenia=encriptar_password(usuarioData.contrasenia),
+      id_rol=rol_cliente.id
     )
+    
     try:
       self.db.add(nuevo_usuario)
       self.db.commit()
       self.db.refresh(nuevo_usuario)
+
+      # CREAR PERFIL BÁSICO POR DEFECTO
+      nuevo_perfil = PerfilUsuario(
+        id_usuario=nuevo_usuario.id,
+        es_temporal=False,
+        alergias="",
+        preferencias="",
+        observaciones_ia=""
+      )
+      self.db.add(nuevo_perfil)
+      self.db.commit()
+
       return nuevo_usuario
     except IntegrityError:
       self.db.rollback()

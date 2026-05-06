@@ -2,10 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 
-# ⚠️ Estos imports deben coincidir con tu estructura real:
-from core.database import get_db
-from models.menu import Plato  # ← Verifica si Plato está en models/menu.py
-from schemas.menu import PlatoCreate, PlatoUpdate, PlatoResponse  # ← Verifica si existen
+from infra.db.database import get_db
+from infra.db.models import Plato 
+from core.schemas.menu_schema import PlatoCreate, PlatoUpdate, PlatoResponse
 from core.security.depencies import require_admin
 
 router = APIRouter(prefix="/platos", tags=["Admin - Platos"])

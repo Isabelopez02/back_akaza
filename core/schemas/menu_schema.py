@@ -59,7 +59,12 @@ class PlatoResponse(PlatoBase):
     class Config:
         from_attributes = True
 
-
+class PlatoUpdate(BaseModel):
+    nombre: Optional[str] = Field(None, max_length=100)
+    descripcion: Optional[str] = None
+    precio_venta: Optional[Decimal] = Field(None, gt=0)
+    class Config:
+        from_attributes = True
 # ==========================================
 # 4. SCHEMAS PARA COMBOS
 # ==========================================

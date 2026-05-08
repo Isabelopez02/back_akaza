@@ -67,6 +67,7 @@ class PlatoUpdate(BaseModel):
     precio_venta: Optional[Decimal] = Field(None, gt=0)
     imagen_url: Optional[str] = None  # ← AGREGADO
     categoria: Optional[str] = None    # ← AGREGADO
+    recetas: Optional[List[RecetaCreate]] = Field(None)
     class Config:
         from_attributes = True
 # ==========================================

@@ -3,9 +3,10 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from infra.db.database import get_db
-from infra.db.models import Plato 
+from infra.db.models.menu import Plato, Receta
 from core.schemas.menu_schema import PlatoCreate, PlatoUpdate, PlatoResponse
 from core.security.depencies import require_admin
+from infra.repository.menu_repo import MenuRepository
 
 router = APIRouter(prefix="/platos", tags=["Admin - Platos"])
 
@@ -27,11 +28,12 @@ async def crear_plato_admin(
     admin: dict = Depends(require_admin)
 ):
     """Crea un nuevo plato (solo admin)"""
-    nuevo_plato = Plato(**plato.model_dump())
-    db.add(nuevo_plato)
-    db.commit()
-    db.refresh(nuevo_plato)
-    return nuevo_plato
+    repo = MenuRepository(db)
+    try:
+        nuevo_plato = repo.crear_plato(plato)
+        return nuevo_plato
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 # ── ACTUALIZAR ─────────────────────────────────────────────────
 @router.put("/{plato_id}", response_model=PlatoResponse)
@@ -46,7 +48,20 @@ async def actualizar_plato_admin(
     if not plato:
         raise HTTPException(status_code=404, detail="Plato no encontrado")
     
-    for field, value in plato_data.model_dump(exclude_unset=True).items():
+    update_data = plato_data.model_dump(exclude_unset=True)
+    
+    if "recetas" in update_data:
+        recetas_data = update_data.pop("recetas")
+        # Eliminar recetas antiguas
+        db.query(Receta).filter(Receta.id_plato == plato.id).delete()
+        db.commit()
+        # Agregar nuevas recetas
+        repo = MenuRepository(db)
+        if recetas_data:
+            for r_data in plato_data.recetas:
+                repo.crear_receta(plato.id, r_data)
+    
+    for field, value in update_data.items():
         setattr(plato, field, value)
     
     db.commit()
@@ -64,6 +79,9 @@ async def eliminar_plato_admin(
     plato = db.query(Plato).filter(Plato.id == plato_id).first()
     if not plato:
         raise HTTPException(status_code=404, detail="Plato no encontrado")
+    
+    # Eliminar recetas relacionadas primero
+    db.query(Receta).filter(Receta.id_plato == plato.id).delete()
     
     db.delete(plato)
     db.commit()

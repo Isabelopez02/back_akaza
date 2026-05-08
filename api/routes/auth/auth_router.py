@@ -37,7 +37,8 @@ def login_usuario(payload: LoginRequest, db: Session = Depends(get_db)):
 
     token = crear_token_jwt({
         "sub": str(usuario.id),
-        "correo": usuario.correo
+        "correo": usuario.correo,
+        "rol": usuario.rol.nombre if usuario.rol else "cliente", 
     })
 
     return {

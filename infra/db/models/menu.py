@@ -11,6 +11,8 @@ class Plato(Base):
     descripcion = Column(Text)
     precio_venta = Column(DECIMAL(10, 2))
     imagen_url = Column(String, nullable=True)
+    categoria = Column(String(50), default="Principal")
+    
     recetas = relationship("Receta", back_populates="plato")
     detalles_pedido = relationship("DetallePedido", back_populates="plato")
 

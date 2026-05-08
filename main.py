@@ -27,7 +27,12 @@ app = FastAPI(
 # Configuración de CORS (Para que tu frontend en Next.js pueda hacerle peticiones)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"], # Cambia por tu frontend real en producción
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:3001", 
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -47,6 +52,17 @@ app.include_router(inventario_router.router)
 app.include_router(compras_router)
 app.include_router(auth_router.router)
 app.include_router(admin_platos_router, prefix="/api/admin")
+
+# ── ENDPOINT DE TEST (para debug) ──────────────────────────────
+@app.get("/test/debug")
+async def debug_test():
+    """Endpoint público para verificar que el backend responde"""
+    return {
+        "status": "OK",
+        "message": "Backend está funcionando",
+        "cors_check": "Si ves esto, CORS está permitido",
+        "timestamp": "2026-05-07"
+    }
 
 # ==========================================
 

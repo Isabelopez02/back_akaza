@@ -35,7 +35,7 @@ class RecetaResponse(BaseModel):
     id_producto: int
     cantidad_estimada: Decimal
     unidad_medida: str
-    es_opcional: bool
+    es_opcional: Optional[bool] = None # ← CORREGIDO
 
     class Config:
         from_attributes = True
@@ -48,6 +48,8 @@ class PlatoBase(BaseModel):
     nombre: str = Field(..., max_length=100)
     descripcion: Optional[str] = None
     precio_venta: Decimal = Field(..., gt=0)
+    imagen_url: Optional[str] = None  # ← AGREGADO: para recibir/enviar URL de imagen
+    categoria: Optional[str] = None    # ← AGREGADO: para filtrar por categoría
 
 class PlatoCreate(PlatoBase):
     recetas: List[RecetaCreate] = Field(default_factory=list)
@@ -63,6 +65,8 @@ class PlatoUpdate(BaseModel):
     nombre: Optional[str] = Field(None, max_length=100)
     descripcion: Optional[str] = None
     precio_venta: Optional[Decimal] = Field(None, gt=0)
+    imagen_url: Optional[str] = None  # ← AGREGADO
+    categoria: Optional[str] = None    # ← AGREGADO
     class Config:
         from_attributes = True
 # ==========================================

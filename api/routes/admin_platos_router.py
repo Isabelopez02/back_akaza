@@ -11,9 +11,13 @@ router = APIRouter(prefix="/platos", tags=["Admin - Platos"])
 
 # ── LISTAR ──────────────────────────────────────────────────────
 @router.get("/", response_model=List[PlatoResponse])
-async def listar_platos_admin(db: Session = Depends(get_db), admin: dict = Depends(require_admin)):
+async def listar_platos_admin(
+    db: Session = Depends(get_db), 
+    admin: dict = Depends(require_admin)  # ✅ SEGURIDAD ACTIVADA
+):
     """Lista todos los platos (solo admin)"""
-    return db.query(Plato).all()
+    platos = db.query(Plato).all()
+    return platos
 
 # ── CREAR ──────────────────────────────────────────────────────
 @router.post("/", response_model=PlatoResponse, status_code=status.HTTP_201_CREATED)

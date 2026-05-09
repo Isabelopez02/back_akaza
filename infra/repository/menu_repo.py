@@ -43,7 +43,9 @@ class MenuRepository:
         nuevo_plato = Plato(
             nombre=data.nombre,
             descripcion=data.descripcion,
-            precio_venta=data.precio_venta
+            precio_venta=data.precio_venta,
+            imagen_url=data.imagen_url,
+            categoria=data.categoria
         )
         self.db.add(nuevo_plato)
         self.db.commit()
@@ -93,6 +95,9 @@ class MenuRepository:
             nuevo_combo = Combo(
                 nombre=data.nombre,
                 precio_venta=data.precio_venta,
+                incluye=data.incluye,
+                ahorro_estimado=data.ahorro_estimado,
+                imagen_url=data.imagen_url,
                 activo=data.activo
             )
             self.db.add(nuevo_combo)

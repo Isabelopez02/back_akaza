@@ -37,10 +37,13 @@ class Combo(Base):
     id = Column(Integer, primary_key=True)
     nombre = Column(String(100))
     precio_venta = Column(DECIMAL(10, 2))
+    precio_real = Column(DECIMAL(10, 2))
     activo = Column(Boolean, default=True)
     imagen_url = Column(String, nullable=True)
+    incluye = Column(String(255), nullable=True)
+    ahorro_estimado = Column(DECIMAL(10, 2), default=0.00)
 
-    platos = relationship("ComboPlato", back_populates="combo")
+    platos = relationship("ComboPlato", back_populates="combo", cascade="all, delete-orphan")
     detalles_pedido = relationship("DetallePedido", back_populates="combo")
 
 
@@ -52,6 +55,14 @@ class ComboPlato(Base):
 
     combo = relationship("Combo", back_populates="platos")
     plato = relationship("Plato")
+
+    @property
+    def id(self):
+        return self.id_plato
+
+    @property
+    def nombre(self):
+        return self.plato.nombre if self.plato else ""
 
 
 class SustitucionPermitida(Base):

@@ -76,6 +76,9 @@ class PlatoUpdate(BaseModel):
 class ComboBase(BaseModel):
     nombre: str = Field(..., max_length=100)
     precio_venta: Decimal = Field(..., gt=0)
+    incluye: Optional[str] = None
+    ahorro_estimado: Decimal = Field(default=Decimal("0.00"), ge=0)
+    imagen_url: Optional[str] = None
     activo: bool = True
 
 class ComboCreate(ComboBase):
@@ -83,6 +86,18 @@ class ComboCreate(ComboBase):
         default_factory=list,
         description="Lista de IDs o Nombres de los platos"
     )
+
+class ComboUpdate(BaseModel):
+    nombre: Optional[str] = Field(None, max_length=100)
+    precio_venta: Optional[Decimal] = Field(None, gt=0)
+    incluye: Optional[str] = None
+    ahorro_estimado: Optional[Decimal] = Field(None, ge=0)
+    imagen_url: Optional[str] = None
+    activo: Optional[bool] = None
+    platos_ref: Optional[List[Union[int, str]]] = Field(None)
+
+    class Config:
+        from_attributes = True
 
 class PlatoBreveResponse(BaseModel):
     id: int
@@ -93,7 +108,7 @@ class PlatoBreveResponse(BaseModel):
 
 class ComboResponse(ComboBase):
     id: int
-    # platos: List[PlatoBreveResponse] = Field(default_factory=list)
+    platos: List[PlatoBreveResponse] = Field(default_factory=list)
 
     class Config:
         from_attributes = True

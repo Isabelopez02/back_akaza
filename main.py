@@ -1,8 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from infra.db.database import engine, Base
-from infra.db import models
-
 
 # 🔥 1. Importa tu ruta del chatbot (Asegúrate de que la ruta coincida con tu archivo)
 # Le ponemos el alias 'chat_router' para que no haya confusiones
@@ -13,6 +11,8 @@ from api.routes import menu_router, pedido_router, inventario_router
 from api.routes.compras_router import router as compras_router
 from api.routes.auth import auth_router
 from api.routes.admin_platos_router import router as admin_platos_router
+from api.routes.admin.admin_combos_router import router as admin_combos_router
+from api.routes.admin.admin_usuarios_router import router as admin_usuarios_router
 
 # Lee los modelos y crea las tablas automáticamente
 Base.metadata.create_all(bind=engine)
@@ -52,6 +52,8 @@ app.include_router(inventario_router.router)
 app.include_router(compras_router)
 app.include_router(auth_router.router)
 app.include_router(admin_platos_router, prefix="/api/admin")
+app.include_router(admin_combos_router, prefix="/api/admin")
+app.include_router(admin_usuarios_router, prefix="/api/admin")
 
 # ── ENDPOINT DE TEST (para debug) ──────────────────────────────
 @app.get("/test/debug")

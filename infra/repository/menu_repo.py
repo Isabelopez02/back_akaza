@@ -95,6 +95,9 @@ class MenuRepository:
             nuevo_combo = Combo(
                 nombre=data.nombre,
                 precio_venta=data.precio_venta,
+                incluye=data.incluye,
+                ahorro_estimado=data.ahorro_estimado,
+                imagen_url=data.imagen_url,
                 activo=data.activo
             )
             self.db.add(nuevo_combo)

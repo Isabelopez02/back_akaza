@@ -21,8 +21,37 @@ def ver_pedidos_mesa(nro_mesa: int, db: Session = Depends(get_db)):
     servicio = PedidoService(db)
     return servicio.listar_pedidos_mesa(nro_mesa)
 
+from typing import List
+from core.schemas.venta_schema import PedidoResponse
+
+@router.get("/", response_model=List[PedidoResponse])
+def listar_todos_pedidos(db: Session = Depends(get_db)):
+    servicio = PedidoService(db)
+    return servicio.listar_todos_pedidos()
+
 # 🔥 EL ENDPOINT CUANDO EL CLIENTE DICE "SÍ, ESTOY DE ACUERDO"
 @router.put("/{id_pedido}/confirmar")
 def confirmar_pedido_cocina(id_pedido: int, db: Session = Depends(get_db)):
     servicio = PedidoService(db)
     return servicio.confirmar_pedido_ia(id_pedido)
+
+@router.put("/{id_pedido}/pagar")
+def pagar_pedido(id_pedido: int, metodo_pago: str = "EFECTIVO", 
+                 monto_efectivo: float = 0.0, monto_yape: float = 0.0, monto_tarjeta: float = 0.0,
+                 db: Session = Depends(get_db)):
+    servicio = PedidoService(db)
+    try:
+        return servicio.pagar_pedido(
+            id_pedido, 
+            metodo_pago=metodo_pago,
+            monto_efectivo=monto_efectivo,
+            monto_yape=monto_yape,
+            monto_tarjeta=monto_tarjeta
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.put("/{id_pedido}/anular")
+def anular_pedido(id_pedido: int, db: Session = Depends(get_db)):
+    servicio = PedidoService(db)
+    return servicio.cancelar_o_anular_pedido(id_pedido)

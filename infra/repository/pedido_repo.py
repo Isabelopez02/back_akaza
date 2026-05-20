@@ -22,6 +22,9 @@ class PedidoRepository:
       )
       self.db.add(nuevo_pedido)
       self.db.flush()  # Flush obtiene el ID del pedido sin hacer commit definitivo
+      
+      # Generamos el ticket automáticamente usando el ID (Ej: ORD-1001)
+      nuevo_pedido.ticket = f"ORD-{nuevo_pedido.id}"
 
       # 2. Procesar cada detalle y sumar el total automáticamente
       for item in data.detalles:
@@ -41,7 +44,18 @@ class PedidoRepository:
             id_plato_final = plato.id  # CORRECCIÓN 1: Capturamos el ID real de la BD
 
         # Lógica similar para el combo si lo enviaran
-        id_combo_final = item.combo_ref if isinstance(item.combo_ref, int) else None
+        id_combo_final = None
+        if item.combo_ref:
+          from infra.db.models.menu import Combo
+          combo = None
+          if isinstance(item.combo_ref, int):
+            combo = self.db.query(Combo).filter(Combo.id == item.combo_ref).first()
+          elif isinstance(item.combo_ref, str):
+            combo = self.db.query(Combo).filter(Combo.nombre == item.combo_ref).first()
+
+          if combo:
+            precio_unitario = float(combo.precio_venta) if combo.precio_venta else 0.0
+            id_combo_final = combo.id
 
         # Creamos el detalle en BD
         nuevo_detalle = DetallePedido(
@@ -75,6 +89,9 @@ class PedidoRepository:
 
   def listar_pedidos_por_mesa(self, nro_mesa: int):
     return self.db.query(Pedido).filter(Pedido.nro_mesa == nro_mesa).all()
+    
+  def listar_todos_pedidos(self):
+    return self.db.query(Pedido).all()
 
   def actualizar_estado(self, id_pedido: int, estado_cocina: str, estado_pago: str):
     pedido = self.obtener_pedido_por_id(id_pedido)
@@ -92,3 +109,29 @@ class PedidoRepository:
       self.db.commit()
       return True
     return False
+
+  def pagar_pedido(self, id_pedido: int, metodo_pago: str = "EFECTIVO", 
+                   monto_efectivo: float = 0.0, monto_yape: float = 0.0, monto_tarjeta: float = 0.0,
+                   ticket_pago: str = None):
+    pedido = self.obtener_pedido_por_id(id_pedido)
+    if pedido and pedido.estado_pago != "PAGADO":
+      pedido.estado_pago = "PAGADO"
+      
+      # Usar el ticket proporcionado o generar uno
+      ticket_comprobante = ticket_pago or f"BOL-{pedido.id}"
+      
+      from infra.db.models.ventas import CompraCliente
+      nueva_compra = CompraCliente(
+        id_pedido=pedido.id,
+        ticket=ticket_comprobante,
+        total=pedido.total,
+        metodo_pago=metodo_pago,
+        monto_efectivo=monto_efectivo,
+        monto_yape=monto_yape,
+        monto_tarjeta=monto_tarjeta
+      )
+      self.db.add(nueva_compra)
+      self.db.commit()
+      self.db.refresh(pedido)
+      return pedido
+    return None

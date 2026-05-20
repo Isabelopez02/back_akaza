@@ -56,6 +56,9 @@ class PedidoService:
   def listar_pedidos_mesa(self, nro_mesa: int):
     return self.pedido_repo.listar_pedidos_por_mesa(nro_mesa)
 
+  def listar_todos_pedidos(self):
+    return self.pedido_repo.listar_todos_pedidos()
+
   def confirmar_pedido_ia(self, id_pedido: int):
     """
     Esta es la función que la IA llama cuando pregunta: "¿Todos están de acuerdo?"
@@ -73,3 +76,18 @@ class PedidoService:
     Por si el cliente se arrepiente antes de que empiece a cocinarse.
     """
     return self.pedido_repo.actualizar_estado(id_pedido, "CANCELADO", "ANULADO")
+
+  def pagar_pedido(self, id_pedido: int, metodo_pago: str = "EFECTIVO", 
+                   monto_efectivo: float = 0.0, monto_yape: float = 0.0, monto_tarjeta: float = 0.0,
+                   ticket_pago: str = None):
+    """
+    Marca un pedido como PAGADO y genera un registro en la tabla de ventas (compras_clientes).
+    """
+    pedido_pagado = self.pedido_repo.pagar_pedido(
+        id_pedido, metodo_pago, 
+        monto_efectivo, monto_yape, monto_tarjeta, 
+        ticket_pago
+    )
+    if not pedido_pagado:
+      raise ValueError(f"El pedido {id_pedido} no pudo ser pagado o ya está pagado.")
+    return pedido_pagado

@@ -8,15 +8,33 @@ class Pedido(Base):
     __tablename__ = "pedidos"
 
     id = Column(Integer, primary_key=True)
-    id_usuario = Column(Integer, ForeignKey("usuarios.id"))
+    id_usuario = Column(Integer, ForeignKey("usuarios.id"), nullable=True) # Si es null, es "Clientes Varios"
     nro_mesa = Column(Integer)
     estado_cocina = Column(String(50), default="ESPERA")
     estado_pago = Column(String(50), default="PENDIENTE")
+    ticket = Column(String(50), nullable=True) # Ej: ORD-1001
     total = Column(DECIMAL(10, 2))
     fecha_venta = Column(TIMESTAMP, default=datetime.utcnow)
 
     usuario = relationship("Usuario")
     detalles = relationship("DetallePedido", back_populates="pedido")
+    comprobante = relationship("CompraCliente", back_populates="pedido", uselist=False)
+
+
+class CompraCliente(Base):
+    __tablename__ = "compras_clientes"
+
+    id = Column(Integer, primary_key=True)
+    id_pedido = Column(Integer, ForeignKey("pedidos.id"), unique=True)
+    ticket = Column(String(50))
+    total = Column(DECIMAL(10, 2))
+    metodo_pago = Column(String(50), default="EFECTIVO")
+    monto_efectivo = Column(DECIMAL(10, 2), default=0.0)
+    monto_yape = Column(DECIMAL(10, 2), default=0.0)
+    monto_tarjeta = Column(DECIMAL(10, 2), default=0.0)
+    fecha_pago = Column(TIMESTAMP, default=datetime.utcnow)
+
+    pedido = relationship("Pedido", back_populates="comprobante")
 
 
 class DetallePedido(Base):

@@ -13,6 +13,7 @@ from api.routes.auth import auth_router
 from api.routes.admin_platos_router import router as admin_platos_router
 from api.routes.admin.admin_combos_router import router as admin_combos_router
 from api.routes.admin.admin_usuarios_router import router as admin_usuarios_router
+from api.routes.dashboard_router import router as dashboard_router
 
 # Lee los modelos y crea las tablas automáticamente
 Base.metadata.create_all(bind=engine)
@@ -54,6 +55,7 @@ app.include_router(auth_router.router)
 app.include_router(admin_platos_router, prefix="/api/admin")
 app.include_router(admin_combos_router, prefix="/api/admin")
 app.include_router(admin_usuarios_router, prefix="/api/admin")
+app.include_router(dashboard_router)
 
 # ── ENDPOINT DE TEST (para debug) ──────────────────────────────
 @app.get("/test/debug")

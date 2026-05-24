@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from infra.db.database import get_db
-from core.schemas.chat import ChatRequest  # Importa tu schema
+from core.schemas.chat import ChatRequest
 from core.services.chatbot import ChatService
 
 router = APIRouter(prefix="/api/chat", tags=["Chatbot IA - Akaza"])
 
-
 @router.post("/mensaje")
 def hablar_con_akaza(request: ChatRequest, db: Session = Depends(get_db)):
+  """Ingests dialogue messages from customers and interacts with Akaza AI chatbot."""
   chat_service = ChatService(db)
 
   try:

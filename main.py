@@ -1,12 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from infra.db.database import engine, Base
+from infra.db.database import init_db
 
-# 🔥 1. Importa tu ruta del chatbot (Asegúrate de que la ruta coincida con tu archivo)
-# Le ponemos el alias 'chat_router' para que no haya confusiones
+# Import routers
 from api.router import router as chat_router
-
-# 🔥 2. Importa los 3 nuevos routers del sistema ERP
 from api.routes import menu_router, pedido_router, inventario_router
 from api.routes.compras_router import router as compras_router
 from api.routes.auth import auth_router
@@ -15,17 +12,17 @@ from api.routes.admin.admin_combos_router import router as admin_combos_router
 from api.routes.admin.admin_usuarios_router import router as admin_usuarios_router
 from api.routes.dashboard_router import router as dashboard_router
 
-# Lee los modelos y crea las tablas automáticamente
-Base.metadata.create_all(bind=engine)
+# Initialize database tables and execute required migrations
+init_db()
 
-# Inicializamos la aplicación FastAPI (Nuestro restaurante)
+# Initialize FastAPI app
 app = FastAPI(
     title="AKAZA - Backend Restaurante & IA",
     description="Chatbot de Akaza y Sistema ERP",
     version="1.0.0"
 )
 
-# Configuración de CORS (Para que tu frontend en Next.js pueda hacerle peticiones)
+# CORS middleware configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -39,14 +36,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ==========================================
-# 🚀 REGISTRO DE RUTAS (ENDPOINTS)
-# ==========================================
-
-# 1. Ruta de tu IA / Chatbot original
+# Register routers
 app.include_router(chat_router)
-
-# 2. Rutas del Sistema ERP que acabamos de armar
 app.include_router(menu_router.router)
 app.include_router(pedido_router.router)
 app.include_router(inventario_router.router)
@@ -57,22 +48,19 @@ app.include_router(admin_combos_router, prefix="/api/admin")
 app.include_router(admin_usuarios_router, prefix="/api/admin")
 app.include_router(dashboard_router)
 
-# ── ENDPOINT DE TEST (para debug) ──────────────────────────────
 @app.get("/test/debug")
 async def debug_test():
-    """Endpoint público para verificar que el backend responde"""
+    """Debug endpoint to verify backend responsiveness."""
     return {
         "status": "OK",
-        "message": "Backend está funcionando",
-        "cors_check": "Si ves esto, CORS está permitido",
+        "message": "Backend is running",
+        "cors_check": "CORS allowed",
         "timestamp": "2026-05-07"
     }
 
-# ==========================================
-
-# Endpoint de prueba (El saludo de bienvenida)
 @app.get("/")
 def health_check():
+    """Health check endpoint to verify database connection and route activation."""
     return {
         "estado": "OK",
         "mensaje": "¡El servidor de AKAZA está abierto, conectado a Postgres y con todas las rutas activas!"

@@ -15,7 +15,7 @@ from infra.repository.chat_repo import ChatRepository
 load_dotenv()
 
 class ChatService:
-  """Handles NLP parsing and chatbot dialogue with Gemini for order collection."""
+  """Maneja el procesamiento del lenguaje natural (NLP) y el diálogo del chatbot con Gemini para la toma de pedidos."""
 
   def __init__(self, db: Session):
     self.db = db
@@ -25,12 +25,12 @@ class ChatService:
     self.modelo = "gemini-2.5-flash"
 
   def procesar_mensaje(self, id_usuario: Optional[int], nro_mesa: Optional[int], mensaje: str) -> str:
-    """Processes user input, runs it through Gemini with the dynamic context, and captures orders."""
+    """Procesa la entrada del usuario, la envía a Gemini con el contexto dinámico y captura los pedidos."""
     try:
-      # Retrieve active catalog with recipes and allowed substitutions
+      # Recuperar el catálogo activo con recetas y sustituciones permitidas
       carta_actual = self.menu_service.obtener_carta_para_ia()
 
-      # Check if table already has an active pending order
+      # Comprobar si la mesa ya tiene un pedido pendiente activo
       tiene_pedido_activo = False
       ticket_activo = ""
       if nro_mesa:
@@ -44,7 +44,7 @@ class ChatService:
           tiene_pedido_activo = True
           ticket_activo = pedido_pendiente.ticket or f"ORD-{pedido_pendiente.id}"
 
-      # Define context and restrictions based on customer authentication and session type
+      # Definir el contexto y las restricciones basadas en la autenticación del cliente y el tipo de sesión
       reglas_especificas = ""
 
       if not nro_mesa:
@@ -72,7 +72,7 @@ class ChatService:
           - Si responde que no, dile que de acuerdo y quédate atento a otras consultas.
           """
 
-      # Construct the core LLM system instructions
+      # Construir las instrucciones principales del sistema para el LLM
       instrucciones_sistema = f"""
       Eres Akaza, la asistente virtual exclusiva de un restaurante de comida marina.
       Eres carismática, Divertida pero DIRECTA.
@@ -85,19 +85,19 @@ class ChatService:
       REGLAS GENERALES, VISUALES Y DE COMPORTAMIENTO:
       1. BREVEDAD EXTREMA: Habla poco. Da respuestas cortas, precisas y al grano (máximo 2 líneas de texto). No escribas párrafos largos ni repitas saludos si ya estás conversando. El cliente tiene hambre, no lo aburras.
       2. RENDERIZADO VISUAL OBLIGATORIO: Cada vez que ofrezcas, recomiendes o menciones un plato, usa ESTRICTAMENTE este formato para que nuestro frontend dibuje la tarjeta con foto:
-         ||Nombre - Precio - imagen_url||
-         Ejemplo: "Te sugiero probar el ||Ceviche Clásico - 35.50 - https://rutatuya.com/ceviche.jpg||."
-         (Usa el campo 'imagen_url' que viene en el JSON. Si el plato no tiene imagen en el JSON, usa la palabra 'null' en su lugar).
+          ||Nombre - Precio - imagen_url||
+          Ejemplo: "Te sugiero probar el ||Ceviche Clásico - 35.50 - https://rutatuya.com/ceviche.jpg||."
+          (Usa el campo 'imagen_url' que viene en el JSON. Si el plato no tiene imagen en el JSON, usa la palabra 'null' en su lugar).
       3. NUNCA inventes platos ni ingredientes. Usa estrictamente el JSON proporcionado.
       4. ALERGIAS: Si mencionan una alergia, revisa los ingredientes.
          - Si tiene sustitución permitida: "Contiene [X], pero lo cambiamos por [Reemplazo] (+[Costo])."
          - Si NO tiene sustitución: "Contiene [X] y no es seguro. ¿Te sugiero [Otro Plato]?"
       5. CONFIRMACIÓN: Cuando armen el pedido, diles el total rápido y pregunta "¿Confirmo la orden?".
       6. INTERCEPTOR (SECRETO): Cuando el usuario confirme que está de acuerdo con su orden, incluye OBLIGATORIAMENTE al final de tu mensaje:
-         [ORDEN_CONFIRMADA] {{"detalles": [{{"plato_ref": 3, "cantidad": 2}}]}}
+          [ORDEN_CONFIRMADA] {{"detalles": [{{"plato_ref": 3, "cantidad": 2}}]}}
       """
 
-      # Reconstruct dialogue history (memory) for context preservation
+      # Reconstruir el historial de diálogo (memoria) para preservar el contexto
       mensajes_previos = self.chat_repo.obtener_historial_reciente(id_usuario=id_usuario, nro_mesa=nro_mesa, limite=4)
       historial_gemini = []
 
@@ -105,10 +105,10 @@ class ChatService:
         historial_gemini.append(types.Content(role="user", parts=[types.Part.from_text(text=msg.mensaje_cliente)]))
         historial_gemini.append(types.Content(role="model", parts=[types.Part.from_text(text=msg.respuesta_ia)]))
 
-      # Append current user prompt to history
+      # Añadir la entrada actual del usuario al historial
       historial_gemini.append(types.Content(role="user", parts=[types.Part.from_text(text=mensaje)]))
 
-      # Generate text and intercept order metadata
+      # Generar texto e interceptar los metadatos del pedido
       response = self.client.models.generate_content(
         model=self.modelo,
         contents=historial_gemini,
@@ -120,7 +120,7 @@ class ChatService:
 
       respuesta_akaza = response.text or ""
 
-      # Check for structured [ORDEN_CONFIRMADA] block in model output
+      # Comprobar si hay un bloque estructurado [ORDEN_CONFIRMADA] en la salida del modelo
       etiqueta_orden = "[ORDEN_CONFIRMADA]"
       if etiqueta_orden in respuesta_akaza:
         try:
@@ -146,7 +146,7 @@ class ChatService:
           )
           pedido_service.registrar_nuevo_pedido(payload_pedido)
 
-          # Strip command tags and metadata before returning to user
+          # Limpiar las etiquetas de comandos y metadatos antes de retornar al usuario
           respuesta_akaza = re.sub(
             r"\s*\[ORDEN_CONFIRMADA\].*$",
             "",
@@ -154,7 +154,7 @@ class ChatService:
             flags=re.DOTALL,
           ).strip()
         except (json.JSONDecodeError, TypeError, ValueError) as e:
-          # Fallback and clean output tag if error occurs during parsing
+          # Alternativa y limpieza de la etiqueta de salida si ocurre un error durante el análisis
           respuesta_akaza = re.sub(
             r"\s*\[ORDEN_CONFIRMADA\].*$",
             "",
@@ -165,7 +165,7 @@ class ChatService:
             respuesta_akaza = "Tu pedido fue confirmado, pero ocurrió un problema al procesarlo. ¿Puedes reenviarlo, por favor?"
           print(f"[InterceptorPedido] Error: {e}")
 
-      # Save interaction log in repository
+      # Guardar el registro de interacción en el repositorio
       self.chat_repo.guardar_interaccion(
         id_usuario=id_usuario,
         nro_mesa=nro_mesa,

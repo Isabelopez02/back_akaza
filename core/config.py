@@ -13,7 +13,9 @@ class Settings(BaseSettings):
 
     # API Keys
     GEMINI_API_KEY: str
+    TELEGRAM_API_KEY: str
     SECRET_KEY: str
+    ID_ADMIN:str
 
     # Construcción de la URL
     @property

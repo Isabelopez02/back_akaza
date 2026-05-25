@@ -3,34 +3,34 @@ from core.schemas.menu_schema import PlatoCreate, ComboCreate, SustitucionCreate
 from infra.repository.menu_repo import MenuRepository
 
 class MenuService:
-    """Manages restaurant catalog items, including individual dishes, combo meals, and allowed ingredient swaps."""
+    """Gestiona los elementos del catálogo del restaurante, incluyendo platos individuales, combos y sustituciones de ingredientes permitidas."""
 
     def __init__(self, db: Session):
         self.menu_repo = MenuRepository(db)
 
     def crear_nuevo_plato(self, data: PlatoCreate):
-        """Creates a new catalog dish with corresponding recipe links."""
+        """Crea un nuevo plato en el catálogo con sus correspondientes enlaces de recetas."""
         try:
             return self.menu_repo.crear_plato(data)
         except Exception as e:
             raise ValueError(f"Error en la lógica al crear el plato: {str(e)}")
 
     def crear_nuevo_combo(self, data: ComboCreate):
-        """Creates a new combo package combining multiple dishes at a bundled price."""
+        """Crea un nuevo paquete de combo que combina múltiples platos a un precio de paquete."""
         try:
             return self.menu_repo.crear_combo(data)
         except Exception as e:
             raise ValueError(f"Error en la lógica al crear el combo: {str(e)}")
 
     def agregar_sustitucion_permitida(self, data: SustitucionCreate):
-        """Defines an allowed swap between a base ingredient and a replacement ingredient with dynamic pricing."""
+        """Define una sustitución permitida entre un ingrediente base y un ingrediente de reemplazo con precios dinámicos."""
         return self.menu_repo.registrar_sustitucion(data)
 
     def obtener_carta_para_ia(self) -> dict:
         """
-        Retrieves the complete structured restaurant catalog formatted for the chatbot.
+        Obtiene el catálogo estructurado completo del restaurante formateado para el chatbot.
         
-        Includes individual dishes with ingredients, combos, and registered ingredient swaps.
+        Incluye platos individuales con sus ingredientes, combos y sustituciones de ingredientes registradas.
         """
         platos_db = self.menu_repo.obtener_todos()
         combos_db = self.menu_repo.obtener_todos_los_combos()

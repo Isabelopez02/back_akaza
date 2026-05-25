@@ -4,16 +4,16 @@ from core.schemas.venta_schema import PedidoCreate
 from infra.repository.pedido_repo import PedidoRepository
 
 class PedidoService:
-  """Orchestrates order operations, including validation rules and payment processing."""
+  """Orquesta las operaciones de los pedidos, incluyendo reglas de validación y procesamiento de pagos."""
 
   def __init__(self, db: Session):
     self.pedido_repo = PedidoRepository(db)
 
   def registrar_nuevo_pedido(self, data: PedidoCreate):
     """
-    Validates concurrency limits and stores a new customer order.
+    Valida límites de concurrencia y almacena un nuevo pedido de cliente.
     
-    Includes a 5-minute concurrency lock per table to avoid duplicate entries.
+    Incluye una restricción de concurrencia por mesa para evitar entradas duplicadas.
     """
     pedidos_mesa = self.pedido_repo.listar_pedidos_por_mesa(data.nro_mesa)
 
@@ -23,7 +23,7 @@ class PedidoService:
       if hasattr(ultimo_pedido, 'fecha_venta') and ultimo_pedido.fecha_venta:
         tiempo_transcurrido = datetime.utcnow() - ultimo_pedido.fecha_venta
 
-        # Concurrency guard: block duplicate submissions from same table under 2 seconds
+        # Guardia de concurrencia: bloquea envíos duplicados de la misma mesa en menos de 2 segundos
         if tiempo_transcurrido < timedelta(seconds=2):
           raise ValueError(
               f"Conflicto de concurrencia: Ya se está procesando un pedido en la mesa {data.nro_mesa}. "
@@ -31,29 +31,29 @@ class PedidoService:
           )
 
     try:
-      # Defaults to PENDING or ESPERA state during ingestion
+      # Por defecto se establece en estado PENDING o ESPERA durante la ingesta
       nuevo_pedido = self.pedido_repo.crear_pedido(data)
       return nuevo_pedido
     except Exception as e:
       raise ValueError(f"Error interno al procesar el pedido en la BD: {str(e)}")
 
   def obtener_pedido(self, id_pedido: int):
-    """Retrieves single order details by identifier."""
+    """Obtiene los detalles de un único pedido por su identificador."""
     pedido = self.pedido_repo.obtener_pedido_por_id(id_pedido)
     if not pedido:
       raise ValueError(f"El pedido {id_pedido} no existe.")
     return pedido
 
   def listar_pedidos_mesa(self, nro_mesa: int):
-    """Lists all orders created under a specific table number."""
+    """Lista todos los pedidos creados para un número de mesa específico."""
     return self.pedido_repo.listar_pedidos_por_mesa(nro_mesa)
 
   def listar_todos_pedidos(self):
-    """Lists all historical and active orders in the database."""
+    """Lista todos los pedidos históricos y activos en la base de datos."""
     return self.pedido_repo.listar_todos_pedidos()
 
   def confirmar_pedido_ia(self, id_pedido: int):
-    """Pushes a pending order draft directly into kitchen preparation queue."""
+    """Envía un borrador de pedido pendiente directamente a la cola de preparación de la cocina."""
     pedido_actualizado = self.pedido_repo.actualizar_estado(
       id_pedido=id_pedido,
       estado_cocina="PREPARANDO",
@@ -62,13 +62,13 @@ class PedidoService:
     return pedido_actualizado
 
   def cancelar_o_anular_pedido(self, id_pedido: int):
-    """Cancels/annuls order before preparation or kitchen execution begins."""
+    """Cancela o anula un pedido antes de que comience la preparación o la ejecución en cocina."""
     return self.pedido_repo.actualizar_estado(id_pedido, "CANCELADO", "ANULADO")
 
   def pagar_pedido(self, id_pedido: int, metodo_pago: str = "EFECTIVO", 
                    monto_efectivo: float = 0.0, monto_yape: float = 0.0, monto_tarjeta: float = 0.0,
                    ticket_pago: str = None):
-    """Marks an order as paid and creates a corresponding CompraCliente record."""
+    """Marca un pedido como pagado y crea el registro de CompraCliente correspondiente."""
     pedido_pagado = self.pedido_repo.pagar_pedido(
         id_pedido, metodo_pago, 
         monto_efectivo, monto_yape, monto_tarjeta, 

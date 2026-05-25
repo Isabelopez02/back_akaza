@@ -24,4 +24,6 @@ def hablar_con_akaza(request: ChatRequest, db: Session = Depends(get_db)):
       "respuesta_ia": respuesta
     }
   except ValueError as e:
+    import traceback
+    traceback.print_exc()
     raise HTTPException(status_code=500, detail=str(e))

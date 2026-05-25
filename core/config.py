@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     # Conexión Base de Datos
     DATABASE_URL: str
 
+    # Orígenes Permitidos (CORS) - Lista separada por comas
+    ALLOWED_ORIGINS: str
+
     # API Keys
     GEMINI_API_KEY: str
     TELEGRAM_API_KEY: str

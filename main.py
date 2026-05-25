@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from infra.db.database import init_db
+from core.config import settings
 
 # Importar enrutadores
 from api.router import router as chat_router
@@ -23,15 +24,10 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Configuración del middleware CORS
+# Configuración del middleware CORS dinámico
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:3001", 
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:3001",
-    ],
+    allow_origins=[origin.strip() for origin in settings.ALLOWED_ORIGINS.split(",") if origin.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

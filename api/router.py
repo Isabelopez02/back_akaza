@@ -23,5 +23,10 @@ def hablar_con_akaza(request: ChatRequest, db: Session = Depends(get_db)):
       "mesa": request.nro_mesa,
       "respuesta_ia": respuesta
     }
-  except ValueError as e:
-    raise HTTPException(status_code=500, detail=str(e))
+  except Exception as e:  # Cambiamos ValueError por Exception para atrapar TODO
+    import traceback
+    print("========= 🚨 ERROR CRÍTICO EN EL CHAT DE AKAZA 🚨 =========")
+    print(f"Datos recibidos -> Usuario: {request.id_usuario}, Mesa: {request.nro_mesa}, Mensaje: {request.mensaje}")
+    traceback.print_exc()  # Esto pintará las letras rojas exactas en Render
+    print("==========================================================")
+    raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")

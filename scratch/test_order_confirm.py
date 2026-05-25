@@ -1,8 +1,11 @@
+import os
+from dotenv import load_dotenv
 import requests
 import uuid
 import json
 
-BASE_URL = "http://127.0.0.1:8000"
+load_dotenv()
+BASE_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
 
 def test_order_confirmation():
     # 1. Registrar usuario

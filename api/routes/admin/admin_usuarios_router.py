@@ -76,6 +76,13 @@ async def actualizar_usuario_admin(
   if not usuario:
     raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
+  # Impedir que se editen usuarios con rol de administrador
+  if usuario.rol and usuario.rol.nombre.lower() in ["administrador", "admin"]:
+    raise HTTPException(
+      status_code=status.HTTP_403_FORBIDDEN,
+      detail="Acceso denegado. Los usuarios con rol de administrador están protegidos y no pueden ser editados."
+    )
+
   if usuario_update.correo and usuario_update.correo != usuario.correo:
     existe = db.query(Usuario).filter(Usuario.correo == usuario_update.correo).first()
     if existe:
@@ -109,6 +116,13 @@ async def eliminar_usuario_admin(
   usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
   if not usuario:
     raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+  # Impedir que se eliminen usuarios con rol de administrador
+  if usuario.rol and usuario.rol.nombre.lower() in ["administrador", "admin"]:
+    raise HTTPException(
+      status_code=status.HTTP_403_FORBIDDEN,
+      detail="Acceso denegado. Los usuarios con rol de administrador están protegidos y no pueden ser eliminados."
+    )
 
   db.delete(usuario)
   db.commit()

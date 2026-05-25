@@ -99,8 +99,8 @@ class LoginRequest(BaseModel):
 
 class UsuarioResponse(UsuarioBase):
   id: int
-  id_rol: int
-  creado_en: datetime
+  id_rol: Optional[int] = None
+  creado_en: Optional[datetime] = None
   modificado_en: Optional[datetime] = None
   perfil: Optional[PerfilUsuarioResponse] = None
   rol: Optional[RolResponse] = None

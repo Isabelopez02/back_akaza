@@ -4,27 +4,18 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Akaza restaurante Backend"
 
-    # Credenciales
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
-    POSTGRES_SERVER: str = "localhost"
-    POSTGRES_PORT: int = 5432
-    POSTGRES_DB: str
+    # Conexión Base de Datos
+    DATABASE_URL: str
+
+    # Orígenes Permitidos (CORS) - Lista separada por comas
+    ALLOWED_ORIGINS: str
 
     # API Keys
     GEMINI_API_KEY: str
+    TELEGRAM_API_KEY: str
     SECRET_KEY: str
-
-    # Construcción de la URL
-    @property
-    def DATABASE_URL(self) -> str:
-        return (
-            f"postgresql://{self.POSTGRES_USER}:"
-            f"{self.POSTGRES_PASSWORD}@"
-            f"{self.POSTGRES_SERVER}:"
-            f"{self.POSTGRES_PORT}/"
-            f"{self.POSTGRES_DB}"
-        )
+    API_URL: str
+    ID_ADMIN: str
 
     class Config:
         env_file = ".env"

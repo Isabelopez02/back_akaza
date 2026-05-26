@@ -61,17 +61,32 @@ class PedidoCreate(BaseModel):
   detalles: List[DetallePedidoCreate] = Field(..., min_length=1, description="Lista de platos/combos pedidos")
 
 
+class CompraClienteResponse(BaseModel):
+  id: int
+  id_pedido: int
+  ticket: str
+  total: Decimal
+  metodo_pago: str
+  monto_efectivo: Decimal
+  monto_yape: Decimal
+  monto_tarjeta: Decimal
+  fecha_pago: datetime
+
+  class Config:
+    from_attributes = True
+
+
 class PedidoResponse(BaseModel):
   id: int
   id_usuario: Optional[int] = None
   nro_mesa: int
   estado_cocina: EstadoCocina
   estado_pago: EstadoPago
+  ticket: Optional[str] = None
   total: Decimal
   fecha_venta: datetime
-
-  # Devuelve el ticket completo con todo lo que pidieron
   detalles: List[DetallePedidoResponse] = Field(default_factory=list)
+  comprobante: Optional[CompraClienteResponse] = None
 
   class Config:
     from_attributes = True
@@ -80,8 +95,6 @@ class PedidoResponse(BaseModel):
 # ==========================================
 # 3. SCHEMAS PARA RESUMEN DE VENTAS
 # ==========================================
-# (Generalmente no hay un 'Create' aquí porque esto lo calcula el sistema automáticamente al final del día)
-
 class VentaDiaResumenResponse(BaseModel):
   id: int
   fecha: datetime

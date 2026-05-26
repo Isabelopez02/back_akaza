@@ -10,26 +10,21 @@ from infra.repository.menu_repo import MenuRepository
 
 router = APIRouter(prefix="/combos", tags=["Admin - Combos"])
 
-
-# ── LISTAR ──────────────────────────────────────────────────────
 @router.get("/", response_model=List[ComboResponse])
 async def listar_combos_admin(
-        db: Session = Depends(get_db),
-        admin: dict = Depends(require_admin)
+        db: Session = Depends(get_db)
 ):
-  """Lista todos los combos (solo admin)"""
-  combos = db.query(Combo).filter(Combo.activo == True).all()
-  return combos
+  """Lists all active combos (public)."""
+  return db.query(Combo).filter(Combo.activo == True).all()
 
 
-# ── CREAR ──────────────────────────────────────────────────────
 @router.post("/", response_model=ComboResponse, status_code=status.HTTP_201_CREATED)
 async def crear_combo_admin(
         combo: ComboCreate,
         db: Session = Depends(get_db),
         admin: dict = Depends(require_admin)
 ):
-  """Crea un nuevo combo (solo admin)"""
+  """Creates a new combo meal package (admin-only)."""
   repo = MenuRepository(db)
   try:
     nuevo_combo = repo.crear_combo(combo)
@@ -38,7 +33,6 @@ async def crear_combo_admin(
     raise HTTPException(status_code=400, detail=str(e))
 
 
-# ── ACTUALIZAR ─────────────────────────────────────────────────
 @router.put("/{combo_id}", response_model=ComboResponse)
 async def actualizar_combo_admin(
         combo_id: int,
@@ -46,7 +40,7 @@ async def actualizar_combo_admin(
         db: Session = Depends(get_db),
         admin: dict = Depends(require_admin)
 ):
-  """Actualiza un combo existente (solo admin)"""
+  """Updates combo attributes and linked dish definitions (admin-only)."""
   combo = db.query(Combo).filter(Combo.id == combo_id).first()
   if not combo:
     raise HTTPException(status_code=404, detail="Combo no encontrado")
@@ -55,10 +49,12 @@ async def actualizar_combo_admin(
 
   if "platos_ref" in update_data:
     platos_ref = update_data.pop("platos_ref")
-    # Eliminar platos antiguos
+    
+    # Remove previous dishes linked to combo
     db.query(ComboPlato).filter(ComboPlato.id_combo == combo.id).delete()
     db.commit()
-    # Agregar nuevos platos
+    
+    # Link new dishes to combo
     repo = MenuRepository(db)
     if platos_ref:
       for plato_ref in platos_ref:
@@ -77,14 +73,13 @@ async def actualizar_combo_admin(
   return combo
 
 
-# ── ELIMINAR ───────────────────────────────────────────────────
 @router.delete("/{combo_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def eliminar_combo_admin(
         combo_id: int,
         db: Session = Depends(get_db),
         admin: dict = Depends(require_admin)
 ):
-  """Elimina un combo lógicamente (solo admin)"""
+  """Soft deletes a combo meal by setting active to False (admin-only)."""
   combo = db.query(Combo).filter(Combo.id == combo_id).first()
   if not combo:
     raise HTTPException(status_code=404, detail="Combo no encontrado")

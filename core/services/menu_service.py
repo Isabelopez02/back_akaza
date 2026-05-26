@@ -3,34 +3,34 @@ from core.schemas.menu_schema import PlatoCreate, ComboCreate, SustitucionCreate
 from infra.repository.menu_repo import MenuRepository
 
 class MenuService:
+    """Gestiona los elementos del catálogo del restaurante, incluyendo platos individuales, combos y sustituciones de ingredientes permitidas."""
+
     def __init__(self, db: Session):
         self.menu_repo = MenuRepository(db)
 
-    # ==========================================
-    # 1. MÉTODOS DE CREACIÓN (Para el Administrador)
-    # ==========================================
     def crear_nuevo_plato(self, data: PlatoCreate):
+        """Crea un nuevo plato en el catálogo con sus correspondientes enlaces de recetas."""
         try:
             return self.menu_repo.crear_plato(data)
         except Exception as e:
             raise ValueError(f"Error en la lógica al crear el plato: {str(e)}")
 
     def crear_nuevo_combo(self, data: ComboCreate):
+        """Crea un nuevo paquete de combo que combina múltiples platos a un precio de paquete."""
         try:
             return self.menu_repo.crear_combo(data)
         except Exception as e:
             raise ValueError(f"Error en la lógica al crear el combo: {str(e)}")
 
     def agregar_sustitucion_permitida(self, data: SustitucionCreate):
+        """Define una sustitución permitida entre un ingrediente base y un ingrediente de reemplazo con precios dinámicos."""
         return self.menu_repo.registrar_sustitucion(data)
 
-    # ==========================================
-    # 2. MÉTODO ESTRELLA (Para tu IA)
-    # ==========================================
     def obtener_carta_para_ia(self) -> dict:
         """
-        Versión mejorada: Ahora incluye ingredientes y especificaciones
-        para que la IA pueda gestionar alergias.
+        Obtiene el catálogo estructurado completo del restaurante formateado para el chatbot.
+        
+        Incluye platos individuales con sus ingredientes, combos y sustituciones de ingredientes registradas.
         """
         platos_db = self.menu_repo.obtener_todos()
         combos_db = self.menu_repo.obtener_todos_los_combos()
@@ -44,11 +44,9 @@ class MenuService:
         }
 
         for p in platos_db:
-            # Extraemos los ingredientes de la relación 'recetas'
             detalles_ingredientes = []
             if hasattr(p, 'recetas') and p.recetas:
                 for r in p.recetas:
-                    # Intentamos sacar el nombre del producto si existe la relación
                     nombre_prod = r.producto.nombre if hasattr(r, 'producto') else f"ID:{r.id_producto}"
                     detalles_ingredientes.append({
                         "item": nombre_prod,
@@ -62,7 +60,7 @@ class MenuService:
                 "descripcion": p.descripcion,
                 "precio": float(p.precio_venta),
                 "imagen_url": p.imagen_url,
-                "ingredientes": detalles_ingredientes  # ¡ESTO ES LO QUE LE FALTABA A LA IA!
+                "ingredientes": detalles_ingredientes
             })
 
         for c in combos_db:
@@ -74,12 +72,8 @@ class MenuService:
             })
 
         for s in sustituciones_db:
-            # Asumimos que tienes las relaciones SQLAlchemy configuradas.
-            # Si no, esto devolverá los IDs, pero lo ideal es el nombre.
-            nombre_orig = s.producto_original.nombre if hasattr(s,
-                                                                'producto_original') and s.producto_original else f"ID:{s.id_producto_original}"
-            nombre_nuevo = s.producto_nuevo.nombre if hasattr(s,
-                                                              'producto_nuevo') and s.producto_nuevo else f"ID:{s.id_producto_nuevo}"
+            nombre_orig = s.producto_original.nombre if hasattr(s, 'producto_original') and s.producto_original else f"ID:{s.id_producto_original}"
+            nombre_nuevo = s.producto_nuevo.nombre if hasattr(s, 'producto_nuevo') and s.producto_nuevo else f"ID:{s.id_producto_nuevo}"
 
             carta_ia["sustituciones_permitidas"].append({
                 "ingrediente_a_quitar": nombre_orig,

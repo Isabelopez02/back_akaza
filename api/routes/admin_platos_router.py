@@ -13,10 +13,9 @@ router = APIRouter(prefix="/platos", tags=["Admin - Platos"])
 # ── LISTAR ──────────────────────────────────────────────────────
 @router.get("/", response_model=List[PlatoResponse])
 async def listar_platos_admin(
-    db: Session = Depends(get_db), 
-    admin: dict = Depends(require_admin)  # ✅ SEGURIDAD ACTIVADA
+    db: Session = Depends(get_db)
 ):
-    """Lista todos los platos (solo admin)"""
+    """Lista todos los platos (público)"""
     platos = db.query(Plato).all()
     return platos
 

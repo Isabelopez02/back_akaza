@@ -54,10 +54,33 @@ class UsuarioBase(BaseModel):
 
 class UsuarioCreate(UsuarioBase):
   contrasenia: str = Field(..., min_length=8, max_length=72)
+  id_rol: Optional[int] = None
 
   @field_validator("contrasenia")
   @classmethod
   def validar_password_segura(cls, v: str) -> str:
+    if not re.search(r"[A-Z]", v):
+      raise ValueError("Debe incluir al menos una mayúscula.")
+    if not re.search(r"[a-z]", v):
+      raise ValueError("Debe incluir al menos una minúscula.")
+    if not re.search(r"\d", v):
+      raise ValueError("Debe incluir al menos un número.")
+    if not re.search(r"[^\w\s]", v):
+      raise ValueError("Debe incluir al menos un carácter especial.")
+    return v
+
+
+class UsuarioUpdate(BaseModel):
+  nombre: Optional[str] = Field(None, min_length=2, max_length=50)
+  correo: Optional[EmailStr] = None
+  contrasenia: Optional[str] = Field(None, min_length=8, max_length=72)
+  id_rol: Optional[int] = None
+
+  @field_validator("contrasenia")
+  @classmethod
+  def validar_password_segura(cls, v: Optional[str]) -> Optional[str]:
+    if v is None:
+      return v
     if not re.search(r"[A-Z]", v):
       raise ValueError("Debe incluir al menos una mayúscula.")
     if not re.search(r"[a-z]", v):
@@ -76,8 +99,8 @@ class LoginRequest(BaseModel):
 
 class UsuarioResponse(UsuarioBase):
   id: int
-  id_rol: int
-  creado_en: datetime
+  id_rol: Optional[int] = None
+  creado_en: Optional[datetime] = None
   modificado_en: Optional[datetime] = None
   perfil: Optional[PerfilUsuarioResponse] = None
   rol: Optional[RolResponse] = None

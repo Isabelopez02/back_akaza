@@ -1,0 +1,24 @@
+# ==========================================================
+# 🐳 Archivos excluidos de la imagen Docker (.dockerignore)
+# ==========================================================
+
+# Entornos virtuales locales
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Archivos de configuración local e IDEs
+.env
+.idea/
+.vscode/
+.git/
+.gitignore
+
+# Scripts de pruebas temporales y bitácoras
+scratch/
+*.log
+.system_generated/

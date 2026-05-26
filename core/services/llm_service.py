@@ -7,12 +7,10 @@ load_dotenv()
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-
 def interpretar_mensaje(mensaje: str) -> dict:
     """
-    Convierte lenguaje natural a JSON estructurado.
+    Analiza los mensajes en lenguaje natural para estructurarlos en JSON utilizando Gemini.
     """
-
     prompt = f"""
     Eres Akaza, una asistente virtual de un restaurante peruano.
 
@@ -75,26 +73,26 @@ def interpretar_mensaje(mensaje: str) -> dict:
     """
     try:
         response = client.models.generate_content(
-            model="gemini-3-flash-preview", # ⚠️ usa este, no preview raro
+            model="gemini-3-flash-preview",
             contents=prompt
         )
 
         texto = response.text.strip()
 
-        # 🔥 LIMPIEZA (Gemini a veces mete ```json)
+        # Limpiar los bloques de código markdown si el modelo los emite
         if "```" in texto:
             texto = texto.replace("```json", "").replace("```", "").strip()
 
         return json.loads(texto)
 
     except Exception as e:
-        print("Error Gemini:", e)
-
-        # 🔥 fallback inteligente (CLAVE)
+        print("Error de la API de Gemini:", e)
+        # Análisis de respaldo con expresiones regulares locales si falla la API del modelo
         return fallback_parse(mensaje)
 
 
 def fallback_parse(texto: str) -> dict:
+    """Intérprete de respaldo local utilizando expresiones regulares."""
     texto = texto.lower()
 
     if "hola" in texto:

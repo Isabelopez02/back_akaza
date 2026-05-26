@@ -4,7 +4,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from core.security.security import crear_token_jwt, decodificar_token, SECRET_KEY, ALGORITHM
-from core.schemas.usuario_schema import LoginRequest, UsuarioCreate
+from core.schemas.usuario_schema import LoginRequest, UsuarioCreate, PerfilUsuarioCreate
 from infra.db.database import get_db
 from infra.repository.usuario_repo import UsuarioRepository
 from infra.db.models.usuarios import Usuario
@@ -76,4 +76,41 @@ def obtener_usuario_actual(db: Session = Depends(get_db), credentials: HTTPAutho
         "correo": usuario.correo,
         "rol": usuario.rol.nombre if usuario.rol else "cliente",
         "autenticado": True,
+        "alergias": usuario.perfil.alergias if usuario.perfil else "",
+        "preferencias": usuario.perfil.preferencias if usuario.perfil else "",
+    }
+
+
+@router.put("/profile")
+def actualizar_perfil(datos: PerfilUsuarioCreate, db: Session = Depends(get_db), credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    try:
+        payload = decodificar_token(token)
+        user_id = int(payload.get("sub"))
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido o expirado",
+        )
+    
+    repo = UsuarioRepository(db)
+    perfil = repo.actualizar_perfil_usuario(user_id, datos)
+    if not perfil:
+        # Si por alguna razón el perfil no existía, lo creamos
+        from infra.db.models.usuarios import PerfilUsuario
+        perfil = PerfilUsuario(
+            id_usuario=user_id,
+            es_temporal=False,
+            alergias=datos.alergias or "",
+            preferencias=datos.preferencias or "",
+            observaciones_ia=""
+        )
+        db.add(perfil)
+        db.commit()
+        db.refresh(perfil)
+
+    return {
+        "status": "success",
+        "alergias": perfil.alergias,
+        "preferencias": perfil.preferencias
     }

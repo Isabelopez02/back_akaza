@@ -11,10 +11,14 @@ def hablar_con_akaza(request: ChatRequest, db: Session = Depends(get_db)):
   """Ingests dialogue messages from customers and interacts with Akaza AI chatbot."""
   chat_service = ChatService(db)
 
+  # Normalizar valores ficticios (0) a None para mantener consistencia interna y de BD
+  id_usuario_final = request.id_usuario if request.id_usuario != 0 else None
+  nro_mesa_final = request.nro_mesa if request.nro_mesa != 0 else None
+
   try:
     respuesta = chat_service.procesar_mensaje(
-      id_usuario=request.id_usuario,
-      nro_mesa=request.nro_mesa,
+      id_usuario=id_usuario_final,
+      nro_mesa=nro_mesa_final,
       mensaje=request.mensaje
     )
 

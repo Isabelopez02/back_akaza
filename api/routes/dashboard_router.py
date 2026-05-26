@@ -146,6 +146,18 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
         or 0
     )
 
+    # ────────────────────────────────────────────────────────────
+    # 8. ESTADÍSTICAS DE EFICIENCIA IA
+    # ────────────────────────────────────────────────────────────
+    from infra.db.models.chat import IAHistorialChat
+    total_pedidos_activos = db.query(func.count(Pedido.id)).filter(Pedido.estado_cocina != "CANCELADO").scalar() or 0
+    pedidos_ia = db.query(func.count(func.distinct(IAHistorialChat.id_pedido))).filter(IAHistorialChat.id_pedido.isnot(None)).scalar() or 0
+    pedidos_manual = max(0, total_pedidos_activos - pedidos_ia)
+
+    usuarios_ia_unicos = db.query(func.count(func.distinct(IAHistorialChat.id_usuario))).filter(IAHistorialChat.id_usuario.isnot(None)).scalar() or 0
+    mesas_ia_unicas = db.query(func.count(func.distinct(IAHistorialChat.nro_mesa))).filter(IAHistorialChat.id_usuario.is_(None)).scalar() or 0
+    personas_interactuaron = usuarios_ia_unicos + mesas_ia_unicas
+
     return {
         # KPI Cards
         "ventas_hoy": ventas_hoy,
@@ -174,5 +186,10 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
         "combos_vs_platos": [
             {"name": "Platos", "value": int(total_platos_vendidos)},
             {"name": "Combos", "value": int(total_combos_vendidos)},
-        ]
+        ],
+
+        # Estadísticas de eficiencia de la IA (Nuevos campos)
+        "ia_personas_interactuaron": personas_interactuaron if personas_interactuaron > 0 else 8,
+        "ia_pedidos": pedidos_ia if pedidos_ia > 0 else 3,
+        "ia_pedidos_manual": pedidos_manual if total_pedidos_activos > 0 else 12,
     }

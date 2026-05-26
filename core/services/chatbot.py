@@ -50,7 +50,10 @@ class ChatService:
       if not nro_mesa:
         reglas_especificas = """
           ESTADO: Informativo (No ha escaneado QR).
-          REGLA DE PEDIDOS: TIENES PROHIBIDO TOMAR PEDIDOS. Si intentan pedir, di: "Me encantaría tomar tu orden, pero por favor escanea el código QR de tu mesa primero."
+          REGLAS DE PEDIDOS:
+          - TIENES TOTALMENTE PROHIBIDO TOMAR PEDIDOS, CONFIRMAR ÓRDENES O GENERAR DETALLES DE PEDIDO.
+          - Puedes mostrar, sugerir y ofrecer libremente información detallada sobre los platos y combos del menú de hoy.
+          - Si el usuario intenta ordenar, pedir, confirmar o armar un pedido, debes indicarle de forma amable y directa: "Me encantaría tomar tu orden, pero por favor escanea el código QR de tu mesa primero para poder registrarla."
           """
       elif nro_mesa and not id_usuario:
         reglas_especificas = f"""

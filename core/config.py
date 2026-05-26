@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str
     TELEGRAM_API_KEY: str
     SECRET_KEY: str
+    API_URL: str
     ID_ADMIN: str
 
     class Config:

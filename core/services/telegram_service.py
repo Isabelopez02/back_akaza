@@ -158,6 +158,36 @@ def consultar_ia_dashboard(mensaje_admin: str, datos_dashboard: dict) -> str:
   return response.text or "No se pudo compilar la respuesta ejecutiva."
 
 
+def consultar_ia_cliente_general(mensaje_cliente: str, carta_actual: dict) -> str:
+  """Interactúa con Gemini como un bot informativo de cara al cliente general en Telegram."""
+  instrucciones_sistema = f"""
+    Eres el Asistente Virtual Informativo de Atención al Cliente de "Akaza Restaurante".
+    Tu propósito es interactuar de manera sumamente amable, alegre y servicial con los clientes que nos escriben por Telegram.
+    
+    AQUÍ TIENES LA CARTA ACTUAL DEL DÍA (En formato JSON):
+    {carta_actual}
+    
+    REGLAS DE COMPORTAMIENTO Y FORMATO OBLIGATORIAS:
+    1. Ofrece recomendaciones del menú, describe los platos y da información general (como horarios de atención, especialidad marina de la casa, etc.).
+    2. Tienes PROHIBIDO tomar pedidos por este canal de Telegram. Si intentan pedir, indícales cordialmente que deben visitarnos en el restaurante y escanear el QR de su mesa para realizar su pedido interactivo.
+    3. Si te preguntan sobre datos administrativos, finanzas, ventas, ganancias, gastos o reportes del negocio, debes responder firmemente que es información privada y que tú solo eres un asistente informativo de atención al cliente.
+    4. Responde utilizando estrictamente formato HTML válido para Telegram.
+    5. Usa la etiqueta <b>texto</b> para poner texto en negrita.
+    6. Usa la etiqueta <i>texto</i> para cursiva.
+    7. TIENES TOTALMENTE PROHIBIDO usar formato Markdown (como asteriscos *, guiones bajos _, comillas invertidas `) en tus respuestas. Esto es crítico para evitar errores de parseo en Telegram.
+    """
+
+  response = ai_client.models.generate_content(
+      model="gemini-2.5-flash",
+      contents=[mensaje_cliente],
+      config=gemini_types.GenerateContentConfig(
+          system_instruction=instrucciones_sistema,
+          temperature=0.7,
+      )
+  )
+  return response.text or "Hola, ¿en qué te puedo asistir hoy?"
+
+
 @router.post("/webhook")
 async def telegram_webhook(request_body: dict, db: Session = Depends(get_db)):
   update = types.Update.de_json(request_body)
@@ -166,10 +196,19 @@ async def telegram_webhook(request_body: dict, db: Session = Depends(get_db)):
     chat_id = update.message.chat.id
     mensaje_admin = update.message.text
 
-    # 🔒 FILTRO DE SEGURIDAD ESTRICTO PARA EL ADMINISTRADOR
+    # 🔒 FILTRO DE SEGURIDAD PARA EL ADMINISTRADOR / MODO CLIENTE GENERAL
     if str(chat_id) != settings.ID_ADMIN:
-      bot.send_message(chat_id, "Acceso denegado. Este canal de inteligencia es privado.")
-      return {"status": "unauthorized"}
+      try:
+        from core.services.menu_service import MenuService
+        menu_service = MenuService(db)
+        carta_actual = menu_service.obtener_carta_para_ia()
+        
+        respuesta_cliente = consultar_ia_cliente_general(mensaje_admin, carta_actual)
+        bot.send_message(chat_id, respuesta_cliente, parse_mode="HTML")
+      except Exception as e:
+        print(f"[Telegram Client Bot Error]: {e}")
+        bot.send_message(chat_id, "Hola, en este momento estoy actualizando nuestra carta marina. ¿En qué te puedo ayudar?")
+      return {"status": "client_handled"}
 
     try:
       # 1. Traemos la data fresca de la base de datos para tu dashboard

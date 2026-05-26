@@ -8,6 +8,7 @@ from google import genai
 from google.genai import types as gemini_types
 
 from core.config import settings
+from core.services.chat_analysis_service import ChatAnalysisService
 from infra.db.database import get_db
 from infra.db.models.ventas import Pedido, DetallePedido, CompraCliente
 from infra.db.models.menu import Plato
@@ -211,6 +212,63 @@ async def telegram_webhook(request_body: dict, db: Session = Depends(get_db)):
       return {"status": "client_handled"}
 
     try:
+      # 🔹 COMANDOS DE ANÁLISIS DE CHATS PARA ADMIN
+      if mensaje_admin.startswith("/chat_"):
+        analysis_service = ChatAnalysisService(db)
+        
+        if mensaje_admin == "/chat_help":
+          respuesta = """
+<b>📊 COMANDOS DE ANÁLISIS DE CHATS DISPONIBLES:</b>
+
+- <b>/chat_reporte</b> - Reporte ejecutivo general
+- <b>/chat_preguntas</b> - Preguntas más frecuentes de clientes
+- <b>/chat_opiniones</b> - Opiniones y sentimientos de clientes
+- <b>/chat_platos</b> - Platos más mencionados y solicitados
+- <b>/chat_stats</b> - Estadísticas básicas (últimos 7 días)
+
+Estos análisis te ayudan a entender mejor qué piensan y qué preguntan los clientes.
+"""
+          bot.send_message(chat_id, respuesta, parse_mode="HTML")
+          return {"status": "command_handled"}
+        
+        elif mensaje_admin == "/chat_reporte":
+          respuesta = analysis_service.generar_reporte_completo(dias=7)
+          bot.send_message(chat_id, respuesta, parse_mode="HTML")
+          return {"status": "command_handled"}
+        
+        elif mensaje_admin == "/chat_preguntas":
+          bot.send_message(chat_id, "🔍 Analizando preguntas frecuentes... (esto puede tomar unos segundos)", parse_mode="HTML")
+          respuesta = analysis_service.analizar_preguntas_frecuentes(dias=7)
+          bot.send_message(chat_id, respuesta, parse_mode="HTML")
+          return {"status": "command_handled"}
+        
+        elif mensaje_admin == "/chat_opiniones":
+          bot.send_message(chat_id, "💬 Analizando opiniones de clientes... (esto puede tomar unos segundos)", parse_mode="HTML")
+          respuesta = analysis_service.analizar_opiniones_clientes(dias=7)
+          bot.send_message(chat_id, respuesta, parse_mode="HTML")
+          return {"status": "command_handled"}
+        
+        elif mensaje_admin == "/chat_platos":
+          bot.send_message(chat_id, "🍽️ Analizando platos mencionados... (esto puede tomar unos segundos)", parse_mode="HTML")
+          respuesta = analysis_service.analizar_platos_mencionados(dias=7)
+          bot.send_message(chat_id, respuesta, parse_mode="HTML")
+          return {"status": "command_handled"}
+        
+        elif mensaje_admin == "/chat_stats":
+          stats = analysis_service.obtener_estadisticas_basicas(dias=7)
+          respuesta = f"""
+<b>📈 ESTADÍSTICAS DE CHATS - ÚLTIMOS 7 DÍAS</b>
+
+- Total de mensajes: <code>{stats['total_mensajes']}</code>
+- Usuarios únicos activos: <code>{stats['usuarios_unicos']}</code>
+- Mesas atendidas: <code>{stats['mesas_unicas']}</code>
+
+Escribe /chat_help para más opciones de análisis.
+"""
+          bot.send_message(chat_id, respuesta, parse_mode="HTML")
+          return {"status": "command_handled"}
+
+      # 🔹 MODO NORMAL: PREGUNTAS SOBRE MÉTRICAS OPERATIVAS
       # 1. Traemos la data fresca de la base de datos para tu dashboard
       datos_actuales = obtener_metricas_dashboard(db)
 

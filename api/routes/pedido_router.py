@@ -56,3 +56,15 @@ def anular_pedido(id_pedido: int, db: Session = Depends(get_db)):
     """Annullas/cancels a specific active order."""
     servicio = PedidoService(db)
     return servicio.cancelar_o_anular_pedido(id_pedido)
+
+@router.put("/{id_pedido}/preparar")
+def preparar_pedido_cocina(id_pedido: int, db: Session = Depends(get_db)):
+    """Cambia el estado del pedido en cocina a PREPARANDO."""
+    servicio = PedidoService(db)
+    return servicio.pedido_repo.actualizar_estado(id_pedido, "PREPARANDO", "PENDIENTE")
+
+@router.put("/{id_pedido}/listo")
+def completar_pedido_cocina(id_pedido: int, db: Session = Depends(get_db)):
+    """Cambia el estado del pedido en cocina a LISTO."""
+    servicio = PedidoService(db)
+    return servicio.pedido_repo.actualizar_estado(id_pedido, "LISTO", "PENDIENTE")

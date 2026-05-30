@@ -189,6 +189,45 @@ Responde en HTML válido para Telegram:
         except Exception as e:
             return f"Error al analizar platos: {str(e)}"
 
+    def responder_pregunta_chat(self, pregunta_admin: str, dias: int = 7) -> str:
+        """Responde preguntas ejecutivas sobre la actividad de clientes por chat/Telegram."""
+        try:
+            stats = self.obtener_estadisticas_basicas(dias=dias)
+            mensajes = self.obtener_mensajes_recientes(dias=dias, limite=100)
+
+            if not mensajes:
+                return "No hay suficientes datos de chat para responder esta consulta."
+
+            texto_mensajes = "\n".join([f"- {msg.mensaje_cliente}" for msg in mensajes[:50]])
+
+            prompt = f"""
+Eres un asistente ejecutivo para el administrador de Akaza Restaurante.
+Tienes datos de actividad de chat/Telegram de clientes y debes responder de forma clara, breve y con formato HTML válido para Telegram.
+
+Datos disponibles:
+- Mensajes totales últimos {dias} días: {stats['total_mensajes']}
+- Usuarios únicos: {stats['usuarios_unicos']}
+- Mesas únicas: {stats['mesas_unicas']}
+
+Ejemplos de mensajes recientes:
+{texto_mensajes}
+
+Pregunta del administrador: {pregunta_admin}
+
+Responde con un texto directo, menciona cifras cuando correspondan y usa HTML válido para Telegram:
+- <b>texto</b> para negritas
+- <code>texto</code> para números y datos clave
+- separa secciones con saltos de línea
+"""
+
+            response = self.client.models.generate_content(
+                model=self.modelo,
+                contents=[prompt]
+            )
+            return response.text or "No se pudo procesar la consulta de chat en este momento."
+        except Exception as e:
+            return f"Error al responder pregunta de chat: {str(e)}"
+
     def generar_reporte_completo(self, dias: int = 7) -> str:
         """Genera un reporte ejecutivo completo con todos los análisis."""
         try:

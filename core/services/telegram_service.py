@@ -159,6 +159,13 @@ def consultar_ia_dashboard(mensaje_admin: str, datos_dashboard: dict) -> str:
   return response.text or "No se pudo compilar la respuesta ejecutiva."
 
 
+def es_consulta_chat(mensaje: str) -> bool:
+  texto = mensaje.lower()
+  patrones_chat = ["telegram", "chat", "clientes", "cliente", "interacción", "interacciones", "mensajes", "consulta", "consultas", "pregunt", "información", "informacion", "dicen", "dijeron", "contacto"]
+  patrones_pregunta = ["cuant", "qué", "que", "cómo", "como", "recib", "pregunt", "tema", "temas", "opinión", "opiniones"]
+  return any(p in texto for p in patrones_chat) and any(q in texto for q in patrones_pregunta)
+
+
 def consultar_ia_cliente_general(mensaje_cliente: str, carta_actual: dict) -> str:
   """Interactúa con Gemini como un bot informativo de cara al cliente general en Telegram."""
   instrucciones_sistema = f"""
@@ -213,8 +220,8 @@ async def telegram_webhook(request_body: dict, db: Session = Depends(get_db)):
 
     try:
       # 🔹 COMANDOS DE ANÁLISIS DE CHATS PARA ADMIN
+      analysis_service = ChatAnalysisService(db)
       if mensaje_admin.startswith("/chat_"):
-        analysis_service = ChatAnalysisService(db)
         
         if mensaje_admin == "/chat_help":
           respuesta = """
@@ -267,6 +274,11 @@ Escribe /chat_help para más opciones de análisis.
 """
           bot.send_message(chat_id, respuesta, parse_mode="HTML")
           return {"status": "command_handled"}
+
+      if es_consulta_chat(mensaje_admin):
+        respuesta = analysis_service.responder_pregunta_chat(mensaje_admin, dias=7)
+        bot.send_message(chat_id, respuesta, parse_mode="HTML")
+        return {"status": "chat_analysis_handled"}
 
       # 🔹 MODO NORMAL: PREGUNTAS SOBRE MÉTRICAS OPERATIVAS
       # 1. Traemos la data fresca de la base de datos para tu dashboard

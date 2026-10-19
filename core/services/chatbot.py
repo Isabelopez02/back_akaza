@@ -5,6 +5,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from google import genai
 from google.genai import types
+import requests
 from dotenv import load_dotenv
 
 from core.services.menu_service import MenuService
@@ -15,17 +16,31 @@ from infra.repository.chat_repo import ChatRepository
 load_dotenv()
 
 class ChatService:
-  """Maneja el procesamiento del lenguaje natural (NLP) y el diálogo del chatbot con Gemini para la toma de pedidos."""
+  """Maneja el procesamiento del lenguaje natural (NLP) con Azure AI Foundry (GPT-4o) y respaldo con Gemini."""
 
   def __init__(self, db: Session):
     self.db = db
     self.menu_service = MenuService(db)
     self.chat_repo = ChatRepository(db)
-    self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-    self.modelo = "gemini-2.5-flash"
+    
+    # Parámetros de Azure AI Foundry (GPT-4o)
+    self.azure_key = os.getenv("AZURE_AI_KEY")
+    self.azure_endpoint = os.getenv("AZURE_AI_ENDPOINT", "https://akaza-ai-resource.openai.azure.com/openai/v1")
+    self.azure_deployment = os.getenv("AZURE_AI_DEPLOYMENT", "gpt-4o")
+
+    # Respaldo con Google Gemini
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    if gemini_key:
+      try:
+        self.client = genai.Client(api_key=gemini_key)
+        self.modelo = "gemini-2.5-flash"
+      except Exception:
+        self.client = None
+    else:
+      self.client = None
 
   def procesar_mensaje(self, id_usuario: Optional[int], nro_mesa: Optional[int], mensaje: str) -> str:
-    """Procesa la entrada del usuario, la envía a Gemini con el contexto dinámico y captura los pedidos."""
+    """Procesa la entrada del usuario usando Azure AI Foundry (o Gemini) y captura los pedidos."""
     try:
       # Recuperar el catálogo activo con recetas y sustituciones permitidas
       carta_actual = self.menu_service.obtener_carta_para_ia()
@@ -102,26 +117,71 @@ class ChatService:
 
       # Reconstruir el historial de diálogo (memoria) para preservar el contexto
       mensajes_previos = self.chat_repo.obtener_historial_reciente(id_usuario=id_usuario, nro_mesa=nro_mesa, limite=4)
-      historial_gemini = []
+      respuesta_akaza = ""
 
-      for msg in mensajes_previos:
-        historial_gemini.append(types.Content(role="user", parts=[types.Part.from_text(text=msg.mensaje_cliente)]))
-        historial_gemini.append(types.Content(role="model", parts=[types.Part.from_text(text=msg.respuesta_ia)]))
+      # 1. Intentar llamar a Azure AI Foundry (GPT-4o)
+      if self.azure_key:
+        try:
+          azure_messages = [{"role": "system", "content": instrucciones_sistema}]
+          for msg in mensajes_previos:
+            azure_messages.append({"role": "user", "content": msg.mensaje_cliente})
+            azure_messages.append({"role": "assistant", "content": msg.respuesta_ia})
+          azure_messages.append({"role": "user", "content": mensaje})
 
-      # Añadir la entrada actual del usuario al historial
-      historial_gemini.append(types.Content(role="user", parts=[types.Part.from_text(text=mensaje)]))
+          endpoint_clean = self.azure_endpoint.rstrip("/")
+          if endpoint_clean.endswith("/openai/v1") or "/openai/v1" in endpoint_clean:
+            url = f"{endpoint_clean}/chat/completions"
+            payload = {
+              "model": self.azure_deployment,
+              "messages": azure_messages,
+              "temperature": 0.7,
+              "max_tokens": 800
+            }
+          else:
+            url = f"{endpoint_clean}/openai/deployments/{self.azure_deployment}/chat/completions?api-version=2024-08-01-preview"
+            payload = {
+              "messages": azure_messages,
+              "temperature": 0.7,
+              "max_tokens": 800
+            }
 
-      # Generar texto e interceptar los metadatos del pedido
-      response = self.client.models.generate_content(
-        model=self.modelo,
-        contents=historial_gemini,
-        config=types.GenerateContentConfig(
-          system_instruction=instrucciones_sistema,
-          temperature=0.7,
-        )
-      )
+          headers = {
+            "api-key": self.azure_key,
+            "Authorization": f"Bearer {self.azure_key}",
+            "Content-Type": "application/json"
+          }
+          resp = requests.post(url, headers=headers, json=payload, timeout=20)
+          if resp.status_code == 200:
+            data = resp.json()
+            respuesta_akaza = data["choices"][0]["message"]["content"]
+          else:
+            print(f"[Azure AI Foundry] Error {resp.status_code}: {resp.text}")
+        except Exception as e:
+          print(f"[Azure AI Foundry] Excepción al invocar agente: {e}")
 
-      respuesta_akaza = response.text or ""
+      # 2. Respaldo automático con Google Gemini si Azure no está configurado o falla
+      if not respuesta_akaza and self.client:
+        try:
+          historial_gemini = []
+          for msg in mensajes_previos:
+            historial_gemini.append(types.Content(role="user", parts=[types.Part.from_text(text=msg.mensaje_cliente)]))
+            historial_gemini.append(types.Content(role="model", parts=[types.Part.from_text(text=msg.respuesta_ia)]))
+          historial_gemini.append(types.Content(role="user", parts=[types.Part.from_text(text=mensaje)]))
+
+          response = self.client.models.generate_content(
+            model=self.modelo,
+            contents=historial_gemini,
+            config=types.GenerateContentConfig(
+              system_instruction=instrucciones_sistema,
+              temperature=0.7,
+            )
+          )
+          respuesta_akaza = response.text or ""
+        except Exception as e:
+          print(f"[Gemini Fallback] Error: {e}")
+
+      if not respuesta_akaza:
+        respuesta_akaza = "¡Hola! Estoy experimentando una breve interrupción en mi sistema de cocina. ¿Podrías consultarme de nuevo en un segundo?"
 
       # Comprobar si hay un bloque estructurado [ORDEN_CONFIRMADA] en la salida del modelo
       etiqueta_orden = "[ORDEN_CONFIRMADA]"

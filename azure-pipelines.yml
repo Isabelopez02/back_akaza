@@ -14,12 +14,12 @@ variables:
   # Nombre de la Conexión de Servicio (Service Connection) en Azure DevOps
   azureServiceConnection: 'sc-azure-akaza'
 
-  # Parámetros de Azure y Container Registry (ajusta el acrName y resourceGroup según tu Azure)
-  acrName: 'acrakaza'
+  # Parámetros reales de Azure y Container Registry generados por el despliegue
+  acrName: 'acrakazamrkwvoqqvp7fs'
   acrLoginServer: '$(acrName).azurecr.io'
   imageRepository: 'akaza-backend'
   containerAppName: 'akaza-backend'
-  resourceGroup: 'rg-akaza'
+  resourceGroup: 'RG-Akaza-v2'
 
   # Etiqueta única del Build
   tag: '$(Build.BuildId)'

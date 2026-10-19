@@ -1,0 +1,82 @@
+# ==========================================================
+# 🚀 Azure Pipeline CI/CD - Backend FastAPI (back_akaza)
+# ==========================================================
+
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  # Nombre de la Conexión de Servicio (Service Connection) en Azure DevOps
+  azureServiceConnection: 'sc-azure-akaza'
+
+  # Parámetros de Azure y Container Registry (ajusta el acrName y resourceGroup según tu Azure)
+  acrName: 'acrakaza'
+  acrLoginServer: '$(acrName).azurecr.io'
+  imageRepository: 'akaza-backend'
+  containerAppName: 'akaza-backend'
+  resourceGroup: 'rg-akaza'
+
+  # Etiqueta única del Build
+  tag: '$(Build.BuildId)'
+
+stages:
+  # ── Etapa 1: Compilar y subir imagen Docker a ACR ───────
+  - stage: BuildAndPush
+    displayName: 'Build & Push Backend Image'
+    jobs:
+      - job: BuildJob
+        displayName: 'Build and Push to ACR'
+        steps:
+          - task: AzureCLI@2
+            displayName: 'Log in to ACR and Build/Push Docker Image'
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                set -e
+                echo "==> Iniciando sesión en Azure Container Registry..."
+                az acr login --name $(acrName)
+
+                echo "==> Construyendo imagen Docker para FastAPI (multi-stage)..."
+                docker build \
+                  -t $(acrLoginServer)/$(imageRepository):$(tag) \
+                  -t $(acrLoginServer)/$(imageRepository):latest \
+                  -f Dockerfile .
+
+                echo "==> Subiendo imagen a ACR..."
+                docker push $(acrLoginServer)/$(imageRepository):$(tag)
+                docker push $(acrLoginServer)/$(imageRepository):latest
+
+  # ── Etapa 2: Desplegar en Azure Container Apps ───────────
+  - stage: Deploy
+    displayName: 'Deploy to Azure Container Apps'
+    dependsOn: BuildAndPush
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - job: DeployJob
+        displayName: 'Deploy to Container App'
+        steps:
+          - task: AzureCLI@2
+            displayName: 'Update Container App Revision'
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                set -e
+                echo "==> Asegurando extensión containerapp..."
+                az extension add --name containerapp --upgrade --yes
+
+                echo "==> Actualizando Container App '$(containerAppName)' con la nueva imagen..."
+                az containerapp update \
+                  --name $(containerAppName) \
+                  --resource-group $(resourceGroup) \
+                  --image $(acrLoginServer)/$(imageRepository):$(tag)
+
+                echo "==> Despliegue de Backend finalizado correctamente."

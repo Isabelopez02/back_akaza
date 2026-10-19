@@ -2,39 +2,69 @@
 # 🐳 AKAZA FastAPI Backend - Dockerfile de Producción
 # ==========================================================
 
-# 1. Usar una imagen oficial de Python ligera como base
-FROM python:3.11-slim as base
+# ── Etapa 1: Builder (Compilación de dependencias) ────────
+FROM python:3.11-slim AS builder
 
-# 2. Configurar variables de entorno optimizadas para Docker
+# Evitar escritura de archivos .pyc y forzar salida de logs sin búfer
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PORT=8000
+    PYTHONUNBUFFERED=1
 
-# 3. Establecer el directorio de trabajo del contenedor
-WORKDIR /app
+WORKDIR /build
 
-# 4. Instalar dependencias esenciales del sistema operativo
-# - build-essential y libpq-dev: Necesarios para compilar paquetes de Python como psycopg2
-# - curl: Excelente para realizar comprobaciones de salud del contenedor (Health Checks)
+# Instalar herramientas esenciales del SO para compilar paquetes (ej. psycopg2, cryptography)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Crear entorno virtual aislado
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copiar requirements e instalar dependencias en el venv sin caché
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
+
+
+# ── Etapa 2: Runner (Imagen final ligera y segura) ───────
+FROM python:3.11-slim AS runner
+
+# Configuración de entorno para producción
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:$PATH" \
+    PORT=8000 \
+    WORKERS=2
+
+WORKDIR /app
+
+# Instalar únicamente librerías de ejecución en runtime y curl para health checks
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
     curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# 5. Copiar los archivos de requerimientos primero para aprovechar la memoria caché de Docker
-COPY requirements.txt .
+# Copiar el entorno virtual con todas las dependencias ya compiladas desde el builder
+COPY --from=builder /opt/venv /opt/venv
 
-# 6. Instalar y actualizar pip y las dependencias del proyecto
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+# Crear usuario y grupo no-root para máxima seguridad en producción
+RUN groupadd -g 1001 akaza && \
+    useradd -u 1001 -g akaza -s /bin/sh -m akaza
 
-# 7. Copiar la totalidad del código del backend al contenedor
-COPY . .
+# Copiar el código fuente con permisos para el usuario akaza
+COPY --chown=akaza:akaza . /app
 
-# 8. Exponer el puerto estándar en el que correrá la aplicación FastAPI
+# Cambiar al usuario sin privilegios
+USER akaza
+
+# Exponer el puerto predeterminado
 EXPOSE 8000
 
-# 9. Comando de arranque de producción usando Uvicorn
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Verificación de salud (Health Check)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-8000}/ || exit 1
+
+# Comando de inicio: soporta asignación dinámica de puerto ($PORT) y workers ($WORKERS)
+CMD ["sh", "-c", "exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --workers ${WORKERS:-2}"]

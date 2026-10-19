@@ -1,24 +1,85 @@
 # ==========================================================
-# 🐳 Archivos excluidos de la imagen Docker (.dockerignore)
+# 🐳 AKAZA Backend - Archivos excluidos de Docker (.dockerignore)
 # ==========================================================
 
 # Entornos virtuales locales
 venv/
 .venv/
 env/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
+ENV/
+env.bak/
+venv.bak/
 
-# Archivos de configuración local e IDEs
+# Archivos de caché y compilación de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Variables de entorno y secretos locales (NUNCA incluir en producción)
 .env
-.idea/
-.vscode/
+.env.*
+!.env.example
+
+# Control de versiones (Git)
 .git/
 .gitignore
+.gitattributes
 
-# Scripts de pruebas temporales y bitácoras
+# Pruebas temporales, scripts de testing y cobertura
 scratch/
-*.log
+tests/
+test/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+
+# Carpetas de editores e IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Asistentes AI y metadatos del sistema
+.claude-dev-helper/
+.gemini/
 .system_generated/
+*.log
+
+# Archivos de documentación innecesarios en la imagen de producción
+*.md
+docs/
+
+# Archivos de configuración de Docker en sí
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Archivos de sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+*.ps1

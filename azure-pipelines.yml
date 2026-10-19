@@ -14,7 +14,6 @@ pool:
 variables:
   ACR_NAME: 'acrakazamrkwvoqqvp7fs'
   ACR_LOGIN_SERVER: 'acrakazamrkwvoqqvp7fs.azurecr.io'
-  ACR_PASSWORD: '6E6TPQixQsA67O6v4Ogeq6Dfvcn30IBUecVz1Vt7WRaOlUDFdlYIJQQJ99CJACHrzpqEqg7NAAACAZCRPiIl'
   IMAGE_NAME: 'akaza-backend'
   TAG: '$(Build.BuildId)'
 
